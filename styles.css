@@ -113,13 +113,22 @@ a { color: var(--cream); text-decoration: none; }
 
 /* Hero */
 .hero {
+  position: relative;
   min-height: 88vh;
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--line);
+  background-size: cover;
+  background-position: center;
 }
 
-.hero-inner { text-align: center; padding-top: 40px; padding-bottom: 40px; }
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.75) 55%, rgba(10,10,10,0.95) 100%);
+}
+
+.hero-inner { position: relative; z-index: 1; text-align: center; padding-top: 40px; padding-bottom: 40px; }
 
 .eyebrow {
   text-transform: uppercase;
