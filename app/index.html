@@ -51,6 +51,7 @@
           <span class="store-name">Google Play</span>
         </a>
       </div>
+      <p class="store-status" id="storeStatus" hidden></p>
     </div>
   </section>
 </main>
@@ -64,5 +65,20 @@
 </footer>
 
 <script src="/script.js"></script>
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/i.test(ua);
+  var stores = document.querySelectorAll('.store-btn');
+  var target = isIOS ? stores[0] : isAndroid ? stores[1] : null;
+  if (!target || !/^https?:\/\//.test(target.getAttribute('href'))) return;
+
+  var status = document.getElementById('storeStatus');
+  status.textContent = 'Taking you to ' + (isIOS ? 'the App Store' : 'Google Play') + '…';
+  status.hidden = false;
+  window.location.replace(target.href);
+})();
+</script>
 </body>
 </html>

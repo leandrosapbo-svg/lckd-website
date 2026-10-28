@@ -313,6 +313,7 @@ section { padding: 100px 0; border-bottom: 1px solid var(--line); }
   transition: background 0.2s ease, color 0.2s ease;
 }
 .store-btn:hover { background: transparent; color: var(--cream); }
+.store-status { margin-top: 32px; font-size: 0.9rem; letter-spacing: 0.08em; }
 .store-small { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .store-name { font-size: 1.3rem; font-weight: 600; letter-spacing: 0.04em; }
 
