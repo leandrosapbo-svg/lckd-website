@@ -332,5 +332,6 @@ section { padding: 100px 0; border-bottom: 1px solid var(--line); }
   .nav.open { transform: translateX(0); }
   .nav-toggle { display: flex; }
   section { padding: 64px 0; }
+  .app-page { padding: 72px 0; }
   .lab-ghost { font-size: 34vw; }
 }
