@@ -409,6 +409,13 @@ section { padding: 100px 0; border-bottom: 1px solid var(--line); }
 .pack-card .pack-save { color: var(--black) !important; }
 .pack-card-dark .pack-save { color: var(--cream) !important; }
 
+/* Plans and packs link down to "how to buy" */
+a.plan-row, a.pack-card { color: inherit; cursor: pointer; transition: background 0.2s ease, transform 0.2s ease; }
+a.pack-card { display: block; }
+a.plan-row:not(.plan-highlight):hover { background: var(--panel); }
+a.plan-row.plan-highlight:hover, a.pack-card:hover { transform: translateY(-3px); }
+a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
+
 /* Purchase walkthrough */
 .how-grid { display: grid; grid-template-columns: minmax(0, 340px) 1fr; gap: 72px; align-items: center; margin-top: 56px; }
 .phone-wrap { display: flex; justify-content: center; }
