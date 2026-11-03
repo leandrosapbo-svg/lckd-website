@@ -454,6 +454,52 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .how-links { margin-top: 12px !important; display: flex; gap: 20px; }
 .how-links a { color: var(--cream); border-bottom: 1px solid var(--cream-dim); font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
 
+/* Terms & Conditions */
+.legal { background: var(--black); padding: 80px 0 100px; }
+.legal-inner { max-width: 760px; }
+.legal-title { font-size: clamp(2.2rem, 7vw, 3.6rem); text-transform: uppercase; line-height: 1.1; margin-bottom: 12px; }
+.legal-sub { font-size: 1.05rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 40px; }
+.legal p, .legal li { color: #d6d0c2; }
+.legal p { margin: 0 0 14px; }
+.legal-meta { border: 1px solid var(--line); background: var(--panel); padding: 24px 28px; margin-bottom: 32px; }
+.legal-meta p { margin: 0 0 10px; }
+.legal-meta p:last-child { margin-bottom: 0; }
+.legal-meta span { display: block; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cream-dim); margin-bottom: 2px; }
+.legal-toc { margin: 40px 0 8px; padding: 24px 28px; border: 1px solid var(--line); }
+.legal-toc-title { font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cream-dim) !important; margin: 0 0 12px !important; }
+.legal-toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 40px; }
+.legal-toc li { margin-bottom: 6px; break-inside: avoid; font-size: 0.9rem; }
+.legal-toc a { color: var(--cream); border-bottom: 1px solid transparent; }
+.legal-toc a:hover { border-bottom-color: var(--cream-dim); }
+.legal h2 { margin: 56px 0 18px; font-size: clamp(1.2rem, 3vw, 1.6rem); scroll-margin-top: 92px; display: flex; gap: 14px; align-items: baseline; }
+.legal h2 span { color: var(--cream-dim); font-size: 0.85em; min-width: 1.6em; }
+.legal h3 { margin: 24px 0 8px; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.legal ul { margin: 0 0 16px; padding-left: 22px; }
+.legal li { margin-bottom: 8px; }
+.legal-part { margin: 80px 0 0; padding-top: 48px; border-top: 1px solid var(--line); }
+.legal-part .eyebrow { margin-bottom: 12px; }
+.legal-part-title { margin: 0 !important; display: block !important; font-size: clamp(1.6rem, 4.5vw, 2.4rem) !important; }
+.legal-sign { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
+.legal-sign p { margin: 0 0 4px; }
+.legal-sign strong { color: var(--cream); letter-spacing: 0.08em; text-transform: uppercase; }
+.footer-links { margin-top: 16px !important; }
+.footer-links a, .terms-note a, .store-note a, .how-steps p a { border-bottom: 1px solid var(--cream-dim); color: var(--cream); }
+.footer-links a { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.terms-note { margin-top: 32px; font-size: 0.9rem; }
+
+.legal-lang { margin: 0 0 28px !important; }
+.legal-lang a { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cream); border-bottom: 1px solid var(--cream-dim); }
+.limit-strip p.start-note { margin-top: 14px; color: var(--black); font-weight: 600; }
+
+/* Arabic (RTL) legal page */
+.legal-ar { font-family: "Segoe UI", Tahoma, "Helvetica Neue", Arial, sans-serif; }
+.legal-ar * { letter-spacing: 0 !important; text-transform: none !important; }
+.legal-ar p, .legal-ar li { line-height: 1.9; }
+.legal-ar .legal-lang { text-align: left; }
+.legal-ar .legal-toc ol { padding-left: 0; padding-right: 22px; }
+.legal-ar ul { padding-left: 0; padding-right: 22px; }
+.legal-ar h2 { flex-direction: row; }
+
 /* Footer */
 .site-footer { padding: 48px 0; }
 .site-footer p { font-size: 0.9rem; margin: 8px 0 0; }
@@ -473,6 +519,9 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
   .app-page { padding: 72px 0; }
   .pack-grid { grid-template-columns: 1fr; }
   .how-grid { grid-template-columns: 1fr; gap: 48px; }
+  .legal { padding: 56px 0 72px; }
+  .legal-toc ol { columns: 1; }
+  .legal-meta, .legal-toc { padding: 20px; }
   .limit-inner { gap: 24px; }
   .plan-row { align-items: flex-start; }
   .plan-row.plan-highlight { padding: 32px 24px; }
