@@ -500,6 +500,26 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .legal-ar ul { padding-left: 0; padding-right: 22px; }
 .legal-ar h2 { flex-direction: row; }
 
+/* Links page (Instagram bio link) */
+.links-page { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 56px 20px; background: var(--black); overflow: hidden; }
+.links-page::before { content: ""; position: absolute; inset: 0; background-image: var(--links-bg); background-size: cover; background-position: center; opacity: 0.35; }
+.links-page::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.85) 60%, #0a0a0a 100%); }
+.links-inner { position: relative; z-index: 1; width: 100%; max-width: 440px; text-align: center; }
+.links-logo { display: inline-block; font-size: clamp(3rem, 16vw, 4.5rem); font-weight: 700; letter-spacing: 0.3em; padding-left: 0.3em; line-height: 1; }
+.links-tag { margin: 20px 0 6px; font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cream); }
+.links-loc { margin: 0 0 40px; font-size: 0.85rem; letter-spacing: 0.12em; }
+.links-list { display: flex; flex-direction: column; gap: 14px; }
+.link-btn { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border: 1px solid var(--cream); background: rgba(10,10,10,0.55); color: var(--cream); text-align: left; transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
+.link-btn:hover, .link-btn:focus-visible { background: var(--cream); color: var(--black); transform: translateY(-2px); }
+.link-btn-primary { background: var(--cream); color: var(--black); }
+.link-btn-primary:hover, .link-btn-primary:focus-visible { background: transparent; color: var(--cream); }
+.link-text { display: flex; flex-direction: column; gap: 4px; }
+.link-title { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.link-sub { font-size: 0.8rem; letter-spacing: 0.04em; opacity: 0.75; }
+.link-arrow { font-size: 1.4rem; }
+.links-foot { margin: 40px 0 0; font-size: 0.8rem; letter-spacing: 0.2em; }
+.links-foot a { color: var(--cream-dim); }
+
 /* Footer */
 .site-footer { padding: 48px 0; }
 .site-footer p { font-size: 0.9rem; margin: 8px 0 0; }
