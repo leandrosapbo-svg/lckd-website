@@ -563,13 +563,11 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sv-req, .sv-opt { font-style: normal; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--cream-dim); margin-left: 8px; font-weight: 400; }
 .sv-hint { margin: 6px 0 0 1.8em; font-size: 0.85rem; }
 .sv-scale { display: grid; gap: 8px; margin-top: 16px; }
-.sv-n5 { grid-template-columns: repeat(5, 1fr); }
-.sv-n11 { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.sv-n6 { grid-template-columns: repeat(6, 1fr); }
 .sv-q input[type="radio"], .sv-q input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
 .sv-scale label, .sv-choices label { position: relative; cursor: pointer; }
 .sv-scale span, .sv-choices span { display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--panel); color: var(--cream); font-weight: 700; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .sv-scale span { height: 52px; }
-.sv-n11 span { height: 48px; }
 .sv-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .sv-choices span { padding: 14px 20px; font-weight: 400; font-size: 0.95rem; }
 .sv-q label:hover span { border-color: var(--cream-dim); }
