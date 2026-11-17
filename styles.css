@@ -587,3 +587,9 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sv-thanks { text-align: center; padding-top: 80px; }
 .sv-thanks .store-btn { margin-top: 32px; }
 @media (max-width: 480px) { .sv-choices span { padding: 12px 16px; } }
+
+/* App button logos */
+.store-btn-ico { flex-direction: row; align-items: center; gap: 14px; }
+.store-ico { display: inline-flex; gap: 6px; flex: none; }
+.store-ico svg { width: 26px; height: 26px; display: block; }
+.store-text { display: flex; flex-direction: column; align-items: flex-start; }
