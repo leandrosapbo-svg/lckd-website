@@ -90,13 +90,9 @@
       <legend><span class="sv-qn">15</span>What should we improve?</legend>
       <textarea name="improve" rows="4" maxlength="1500" placeholder="Anything: the screens, music, flow, equipment, schedule..."></textarea>
     </fieldset>
-    <fieldset class="sv-q" data-name="founding">
-      <legend><span class="sv-qn">16</span>Are you interested in a founding package?</legend>
-      <p class="sv-hint">Founding prices are for the first 50 members.</p><div class="sv-choices"><label><input type="radio" name="founding" value="Yes"><span>Yes</span></label><label><input type="radio" name="founding" value="Maybe"><span>Maybe</span></label><label><input type="radio" name="founding" value="No"><span>No</span></label></div>
-    </fieldset>
 
     <fieldset class="sv-q" data-name="contact">
-      <legend><span class="sv-qn">17</span>Want us to follow up? <em class="sv-opt">optional</em></legend>
+      <legend><span class="sv-qn">16</span>Want us to follow up? <em class="sv-opt">optional</em></legend>
       <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Your name">
       <input type="tel" name="whatsapp" autocomplete="tel" maxlength="30" placeholder="WhatsApp number">
     </fieldset>
@@ -159,7 +155,7 @@
       flow: val('flow'), transition: val('transition'), beep: val('beep'), pace: val('pace'), intensity: val('intensity'),
       tvs: val('tvs'), music: val('music'), facility: val('facility'), bathrooms: val('bathrooms'), acai: val('acai'),
       liked: all('liked'), improve: form.improve.value.trim(),
-      founding: val('founding'), name: form.name.value.trim(), whatsapp: form.whatsapp.value.trim()
+      name: form.name.value.trim(), whatsapp: form.whatsapp.value.trim()
     };
 
     btn.disabled = true;
