@@ -605,3 +605,4 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sv-q select:focus { outline: none; border-color: var(--cream); }
 .sv-fielderr { margin: 8px 0 0; font-size: 0.85rem; color: #e08a7d; }
 .sv-fielderr[hidden] { display: none; }
+.sv-q input[hidden], .sv-q select[hidden] { display: none !important; }
