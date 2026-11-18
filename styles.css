@@ -591,3 +591,11 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .store-ico { display: inline-flex; gap: 6px; flex: none; }
 .store-ico svg { width: 26px; height: 26px; display: block; }
 .store-text { display: flex; flex-direction: column; align-items: flex-start; }
+
+/* PAR-Q extras */
+.sv-q input[type="email"], .sv-q input[type="date"] { display: block; width: 100%; margin-top: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); color: var(--cream); font: inherit; font-size: 16px; border-radius: 0; color-scheme: dark; }
+.sv-q input[type="email"]:focus, .sv-q input[type="date"]:focus { outline: none; border-color: var(--cream); }
+.sv-lbl { display: block; margin-top: 14px; font-size: 0.8rem; color: var(--cream-dim); }
+.sv-lbl + input { margin-top: 6px !important; }
+.sv-q .sv-choices.sv-yn span { min-width: 84px; }
+.sv-decl { margin-top: 12px; font-size: 0.9rem; line-height: 1.6; color: var(--cream-dim); }

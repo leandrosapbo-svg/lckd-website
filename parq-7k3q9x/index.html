@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Health Questionnaire | LCKD Qatar</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="sv-body">
+
+<main class="sv-page">
+  <header class="sv-head">
+    <a href="/" class="links-logo">LCKD</a>
+    <p class="eyebrow center">Before your first class</p>
+    <h1 class="sv-title">Health<br>questionnaire.</h1>
+    <p class="sv-lede">A quick PAR-Q (Physical Activity Readiness Questionnaire). It takes two minutes and helps us train you safely.</p>
+  </header>
+
+  <form id="parq" class="sv-form" novalidate>
+    <p class="sv-section">About you</p>
+    <fieldset class="sv-q" data-name="you">
+      <legend><span class="sv-qn">1</span>Your details <em class="sv-req">required</em></legend>
+      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name" required>
+      <label class="sv-lbl" for="dob">Date of birth</label>
+      <input type="date" id="dob" name="dob" required>
+      <input type="tel" name="phone" autocomplete="tel" maxlength="30" placeholder="Mobile / WhatsApp number" required>
+      <input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email (optional)">
+    </fieldset>
+    <fieldset class="sv-q" data-name="emergency">
+      <legend><span class="sv-qn">2</span>Emergency contact <em class="sv-req">required</em></legend>
+      <input type="text" name="ename" maxlength="80" placeholder="Contact name and relationship" required>
+      <input type="tel" name="ephone" maxlength="30" placeholder="Contact phone number" required>
+    </fieldset>
+
+    <p class="sv-section">Health questions</p>
+    <p class="sv-hint" style="margin-top:12px">Please answer all seven questions honestly.</p>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">3</span>Has your doctor ever said that you have a heart condition and that you should only do physical activity recommended by a doctor?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q1" value="No"><span>No</span></label><label><input type="radio" name="q1" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">4</span>Do you feel pain in your chest when you do physical activity?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q2" value="No"><span>No</span></label><label><input type="radio" name="q2" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">5</span>In the past month, have you had chest pain when you were not doing physical activity?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q3" value="No"><span>No</span></label><label><input type="radio" name="q3" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">6</span>Do you lose your balance because of dizziness, or do you ever lose consciousness?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q4" value="No"><span>No</span></label><label><input type="radio" name="q4" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">7</span>Do you have a bone or joint problem (for example back, knee or hip) that could be made worse by a change in your physical activity?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q5" value="No"><span>No</span></label><label><input type="radio" name="q5" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">8</span>Is your doctor currently prescribing drugs (for example water pills) for your blood pressure or a heart condition?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q6" value="No"><span>No</span></label><label><input type="radio" name="q6" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-required="1">
+      <legend><span class="sv-qn">9</span>Do you know of any other reason why you should not do physical activity?</legend>
+      <p class="sv-hint">Including pregnancy, recent surgery, injury or any other medical condition.</p>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="q7" value="No"><span>No</span></label><label><input type="radio" name="q7" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+
+    <fieldset class="sv-q" data-name="details">
+      <legend><span class="sv-qn">10</span>If you answered Yes to any question, please tell us more <em class="sv-opt">optional</em></legend>
+      <textarea name="details" rows="4" maxlength="1500" placeholder="Condition, injury, medication, anything we should know..."></textarea>
+    </fieldset>
+
+    <p class="sv-section">Declaration</p>
+    <fieldset class="sv-q" data-name="decl">
+      <legend><span class="sv-qn">11</span>Confirm <em class="sv-req">required</em></legend>
+      <p class="sv-decl">I confirm the answers above are true and complete. I understand that LCKD advises me to see a doctor before training if I answered Yes to any question, and that I take part in classes at my own risk and may stop at any time.</p>
+      <div class="sv-choices"><label><input type="checkbox" name="agree" value="Agreed"><span>I agree</span></label></div>
+      <input type="text" name="signature" maxlength="80" placeholder="Type your full name as signature" required>
+    </fieldset>
+
+    <input type="text" name="company" class="sv-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+    <p class="sv-error" id="svError" role="alert" hidden>Please complete the required fields, answer all seven questions and confirm the declaration.</p>
+    <button type="submit" class="store-btn sv-submit" id="svSubmit">
+      <span class="store-small">Send</span>
+      <span class="store-name">My questionnaire</span>
+    </button>
+    <p class="sv-fine">Your answers are confidential and go to the LCKD team only.</p>
+  </form>
+
+  <section class="sv-thanks" id="svThanks" hidden>
+    <h2 class="sv-title">Thank you.</h2>
+    <p class="sv-lede">Your questionnaire is received. See you in class.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  var ENDPOINT = "https://script.google.com/macros/s/AKfycbxOy-nnyE86TAoHpVm1uoHK5co7sDV7m2tNRoLTtjPbqWvKv3i7A0loExA00sA-F4qG/exec";
+
+  var form = document.getElementById('parq');
+  var err = document.getElementById('svError');
+  var btn = document.getElementById('svSubmit');
+  function val(name) { var el = form.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; }
+  function txt(name) { return form[name].value.trim(); }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (form.company.value) return;
+    var ok = true;
+    // text fields
+    ['name','dob','phone','ename','ephone','signature'].forEach(function (n) {
+      var f = form[n]; var bad = !f.value.trim();
+      f.closest('.sv-q').classList.toggle('sv-invalid', bad); if (bad) ok = false;
+    });
+    // yes/no
+    for (var i = 1; i <= 7; i++) {
+      var fs = form.querySelector('input[name="q' + i + '"]').closest('.sv-q');
+      var has = !!val('q' + i); fs.classList.toggle('sv-invalid', !has); if (!has) ok = false;
+    }
+    var ag = form.agree.checked;
+    if (!ag) { form.agree.closest('.sv-q').classList.add('sv-invalid'); ok = false; }
+    err.hidden = ok;
+    if (!ok) { var first = form.querySelector('.sv-invalid'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+    var data = {
+      submitted: new Date().toISOString(),
+      name: txt('name'), dob: txt('dob'), phone: txt('phone'), email: txt('email'),
+      ename: txt('ename'), ephone: txt('ephone'),
+      q1: val('q1'), q2: val('q2'), q3: val('q3'), q4: val('q4'), q5: val('q5'), q6: val('q6'), q7: val('q7'),
+      details: txt('details'), agree: 'Agreed', signature: txt('signature')
+    };
+    btn.disabled = true;
+    btn.querySelector('.store-name').textContent = 'Sending...';
+    function done() {
+      form.hidden = true;
+      document.querySelector('.sv-head').hidden = true;
+      document.getElementById('svThanks').hidden = false;
+      window.scrollTo(0, 0);
+    }
+    if (!ENDPOINT) { console.log('PAR-Q (no endpoint set)'); done(); return; }
+    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) })
+      .then(done)
+      .catch(function () {
+        btn.disabled = false;
+        btn.querySelector('.store-name').textContent = 'Try again';
+        err.textContent = 'Could not send. Check your connection and try again.';
+        err.hidden = false;
+      });
+  });
+})();
+</script>
+</body>
+</html>
