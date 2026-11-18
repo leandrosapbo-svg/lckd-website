@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
-<title>Health Questionnaire | LCKD Qatar</title>
+<title>Member Health Profile | LCKD Qatar</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/styles.css">
 </head>
@@ -15,84 +15,120 @@
   <header class="sv-head">
     <a href="/" class="links-logo">LCKD</a>
     <p class="eyebrow center">Before your first class</p>
-    <h1 class="sv-title">Health<br>questionnaire.</h1>
-    <p class="sv-lede">A quick PAR-Q (Physical Activity Readiness Questionnaire). It takes two minutes and helps us train you safely.</p>
+    <h1 class="sv-title">Member health &amp;<br>training profile.</h1>
+    <p class="sv-lede">Our group sessions combine functional movement, strength and conditioning. This profile helps our coaches understand your starting point, adapt exercises where needed and support your progress.</p>
   </header>
 
   <form id="parq" class="sv-form" novalidate>
-    <p class="sv-section">About you</p>
-    <fieldset class="sv-q" data-name="you">
+    <p class="sv-section">Member details</p>
+    <fieldset class="sv-q" data-req="you">
       <legend><span class="sv-qn">1</span>Your details <em class="sv-req">required</em></legend>
-      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name" required>
-      <label class="sv-lbl" for="dob">Date of birth</label>
-      <input type="date" id="dob" name="dob" required>
-      <input type="tel" name="phone" autocomplete="tel" maxlength="30" placeholder="Mobile / WhatsApp number" required>
-      <input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email (optional)">
+      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name"><label class="sv-lbl" for="dob">Date of birth</label><input type="date" id="dob" name="dob"><input type="tel" name="phone" autocomplete="tel" maxlength="30" placeholder="Mobile number"><input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email">
     </fieldset>
-    <fieldset class="sv-q" data-name="emergency">
+    <fieldset class="sv-q" data-req="emer">
       <legend><span class="sv-qn">2</span>Emergency contact <em class="sv-req">required</em></legend>
-      <input type="text" name="ename" maxlength="80" placeholder="Contact name and relationship" required>
-      <input type="tel" name="ephone" maxlength="30" placeholder="Contact phone number" required>
+      <input type="text" name="ename" maxlength="80" placeholder="Contact name"><input type="text" name="erel" maxlength="60" placeholder="Relationship"><input type="tel" name="ephone" maxlength="30" placeholder="Contact number">
     </fieldset>
-
-    <p class="sv-section">Health questions</p>
-    <p class="sv-hint" style="margin-top:12px">Please answer all seven questions honestly.</p>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">3</span>Has your doctor ever said that you have a heart condition and that you should only do physical activity recommended by a doctor?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q1" value="No"><span>No</span></label><label><input type="radio" name="q1" value="Yes"><span>Yes</span></label></div>
+    <p class="sv-section">Training experience</p>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">3</span>How often do you currently exercise?</legend>
+      <div class="sv-choices "><label><input type="radio" name="freq" value="Currently inactive"><span>Currently inactive</span></label><label><input type="radio" name="freq" value="1-2 days per week"><span>1-2 days per week</span></label><label><input type="radio" name="freq" value="3-4 days per week"><span>3-4 days per week</span></label><label><input type="radio" name="freq" value="5 or more days per week"><span>5 or more days per week</span></label></div>
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">4</span>Do you feel pain in your chest when you do physical activity?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q2" value="No"><span>No</span></label><label><input type="radio" name="q2" value="Yes"><span>Yes</span></label></div>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">4</span>Have you participated in functional group training before?</legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="groupbefore" value="Yes"><span>Yes</span></label><label><input type="radio" name="groupbefore" value="No"><span>No</span></label></div>
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">5</span>In the past month, have you had chest pain when you were not doing physical activity?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q3" value="No"><span>No</span></label><label><input type="radio" name="q3" value="Yes"><span>Yes</span></label></div>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">5</span>What types of exercise have you practised recently? <em class="sv-opt">optional</em></legend>
+      <textarea name="recent" rows="3" maxlength="1500" placeholder="For example gym, running, yoga, padel..."></textarea>
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">6</span>Do you lose your balance because of dizziness, or do you ever lose consciousness?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q4" value="No"><span>No</span></label><label><input type="radio" name="q4" value="Yes"><span>Yes</span></label></div>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">6</span>Have you recently taken a break from training? <em class="sv-opt">optional</em></legend>
+      <textarea name="brk" rows="3" maxlength="1500" placeholder="Tell us how long and why, if you like."></textarea>
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">7</span>Do you have a bone or joint problem (for example back, knee or hip) that could be made worse by a change in your physical activity?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q5" value="No"><span>No</span></label><label><input type="radio" name="q5" value="Yes"><span>Yes</span></label></div>
+    <p class="sv-section">Health &amp; movement</p>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">7</span>Official PAR-Q+ completion date <em class="sv-opt">optional</em></legend>
+      <p class="sv-hint">Please also complete the official PAR-Q+ before your first class.</p>
+      <input type="date" name="parqdate">
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">8</span>Is your doctor currently prescribing drugs (for example water pills) for your blood pressure or a heart condition?</legend>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q6" value="No"><span>No</span></label><label><input type="radio" name="q6" value="Yes"><span>Yes</span></label></div>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">8</span>Health conditions, medication, injuries, surgery or healthcare advice <em class="sv-opt">optional</em></legend>
+      <p class="sv-hint">Share any health conditions, medication affecting exercise, injuries, recent surgery or healthcare advice.</p>
+      <textarea name="health" rows="4" maxlength="1500" placeholder="Anything our coaches should consider."></textarea>
     </fieldset>
-    <fieldset class="sv-q" data-required="1">
-      <legend><span class="sv-qn">9</span>Do you know of any other reason why you should not do physical activity?</legend>
-      <p class="sv-hint">Including pregnancy, recent surgery, injury or any other medical condition.</p>
-      <div class="sv-choices sv-yn"><label><input type="radio" name="q7" value="No"><span>No</span></label><label><input type="radio" name="q7" value="Yes"><span>Yes</span></label></div>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">9</span>Do you experience pain or discomfort during any of the following? <em class="sv-opt">optional</em></legend>
+      <p class="sv-hint">Choose any that apply.</p>
+      <div class="sv-choices "><label><input type="checkbox" name="disc" value="Squatting or lunging"><span>Squatting or lunging</span></label><label><input type="checkbox" name="disc" value="Bending or lifting"><span>Bending or lifting</span></label><label><input type="checkbox" name="disc" value="Pushing or pulling"><span>Pushing or pulling</span></label><label><input type="checkbox" name="disc" value="Running or jumping"><span>Running or jumping</span></label><label><input type="checkbox" name="disc" value="Floor exercises"><span>Floor exercises</span></label><label><input type="checkbox" name="disc" value="None"><span>None</span></label><label><input type="checkbox" name="disc" value="Other"><span>Other</span></label></div>
     </fieldset>
-
-    <fieldset class="sv-q" data-name="details">
-      <legend><span class="sv-qn">10</span>If you answered Yes to any question, please tell us more <em class="sv-opt">optional</em></legend>
-      <textarea name="details" rows="4" maxlength="1500" placeholder="Condition, injury, medication, anything we should know..."></textarea>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">10</span>Please describe any discomfort or recommended restrictions <em class="sv-opt">optional</em></legend>
+      <textarea name="discdetail" rows="3" maxlength="1500" placeholder="Where, when, and what your doctor or physio advised."></textarea>
     </fieldset>
-
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">11</span>Is there anything else relevant to your participation? <em class="sv-opt">optional</em></legend>
+      <textarea name="other" rows="3" maxlength="1500" placeholder="Including pregnancy or postpartum recovery."></textarea>
+    </fieldset>
+    <p class="sv-section">Your goals</p>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">12</span>What would you like to achieve through your training? <em class="sv-opt">optional</em></legend>
+      <p class="sv-hint">Choose any that apply.</p>
+      <div class="sv-choices "><label><input type="checkbox" name="goals" value="Build strength"><span>Build strength</span></label><label><input type="checkbox" name="goals" value="Improve cardiovascular fitness"><span>Improve cardiovascular fitness</span></label><label><input type="checkbox" name="goals" value="Move with greater confidence"><span>Move with greater confidence</span></label><label><input type="checkbox" name="goals" value="Improve mobility"><span>Improve mobility</span></label><label><input type="checkbox" name="goals" value="Improve body composition"><span>Improve body composition</span></label><label><input type="checkbox" name="goals" value="Prepare for a competition"><span>Prepare for a competition</span></label><label><input type="checkbox" name="goals" value="Establish a consistent routine"><span>Establish a consistent routine</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">13</span>Your main priority <em class="sv-opt">optional</em></legend>
+      <input type="text" name="priority" maxlength="150" placeholder="What matters most to you">
+    </fieldset>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">14</span>How many classes would you like to attend each week? <em class="sv-opt">optional</em></legend>
+      <div class="sv-choices "><label><input type="radio" name="perweek" value="1"><span>1</span></label><label><input type="radio" name="perweek" value="2"><span>2</span></label><label><input type="radio" name="perweek" value="3"><span>3</span></label><label><input type="radio" name="perweek" value="4"><span>4</span></label><label><input type="radio" name="perweek" value="5 or more"><span>5 or more</span></label></div>
+    </fieldset>
+    <p class="sv-section">Pre-exercise health questionnaire</p>
+    <fieldset class="sv-q" data-req="yn">
+      <legend><span class="sv-qn">15</span>Have you been diagnosed with a heart condition, high blood pressure, diabetes or another condition that may affect exercise? <em class="sv-req">required</em></legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="h1" value="No"><span>No</span></label><label><input type="radio" name="h1" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-req="yn">
+      <legend><span class="sv-qn">16</span>Have you experienced chest discomfort, unexplained breathlessness, dizziness or fainting at rest or during exercise? <em class="sv-req">required</em></legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="h2" value="No"><span>No</span></label><label><input type="radio" name="h2" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-req="yn">
+      <legend><span class="sv-qn">17</span>Do you have an injury, pain, recent surgery or movement restriction that our coaches should consider? <em class="sv-req">required</em></legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="h3" value="No"><span>No</span></label><label><input type="radio" name="h3" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-req="yn">
+      <legend><span class="sv-qn">18</span>Are you taking medication that may affect your response to exercise? <em class="sv-req">required</em></legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="h4" value="No"><span>No</span></label><label><input type="radio" name="h4" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q" data-req="yn">
+      <legend><span class="sv-qn">19</span>Are you pregnant, postpartum or following medical advice that may require exercise adaptations? <em class="sv-req">required</em></legend>
+      <div class="sv-choices sv-yn"><label><input type="radio" name="h5" value="No"><span>No</span></label><label><input type="radio" name="h5" value="Yes"><span>Yes</span></label></div>
+    </fieldset>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">20</span>If you answered Yes, please provide details <em class="sv-opt">optional</em></legend>
+      <p class="sv-hint">Please discuss any Yes answers with our team before training. Further screening or medical advice may be needed.</p>
+      <textarea name="yesdetail" rows="4" maxlength="1500" placeholder="Condition, advice received, what to adapt..."></textarea>
+    </fieldset>
     <p class="sv-section">Declaration</p>
-    <fieldset class="sv-q" data-name="decl">
-      <legend><span class="sv-qn">11</span>Confirm <em class="sv-req">required</em></legend>
-      <p class="sv-decl">I confirm the answers above are true and complete. I understand that LCKD advises me to see a doctor before training if I answered Yes to any question, and that I take part in classes at my own risk and may stop at any time.</p>
-      <div class="sv-choices"><label><input type="checkbox" name="agree" value="Agreed"><span>I agree</span></label></div>
-      <input type="text" name="signature" maxlength="80" placeholder="Type your full name as signature" required>
+    <fieldset class="sv-q" data-req="decl">
+      <legend><span class="sv-qn">21</span>Confirm <em class="sv-req">required</em></legend>
+      <p class="sv-decl">I confirm that my answers are accurate to the best of my knowledge. I will inform the LCKD team of relevant health changes and report any discomfort during exercise.</p><div class="sv-choices"><label><input type="checkbox" name="agree" value="Agreed"><span>I agree</span></label></div><input type="text" name="signature" maxlength="80" placeholder="Type your full name as signature"><p class="sv-hint" id="todayLbl"></p>
     </fieldset>
 
     <input type="text" name="company" class="sv-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-    <p class="sv-error" id="svError" role="alert" hidden>Please complete the required fields, answer all seven questions and confirm the declaration.</p>
+    <p class="sv-error" id="svError" role="alert" hidden>Please complete the required fields (details, emergency contact, the five health questions and the declaration).</p>
     <button type="submit" class="store-btn sv-submit" id="svSubmit">
       <span class="store-small">Send</span>
-      <span class="store-name">My questionnaire</span>
+      <span class="store-name">My profile</span>
     </button>
     <p class="sv-fine">Your answers are confidential and go to the LCKD team only.</p>
   </form>
 
   <section class="sv-thanks" id="svThanks" hidden>
     <h2 class="sv-title">Thank you.</h2>
-    <p class="sv-lede">Your questionnaire is received. See you in class.</p>
+    <p class="sv-lede">Your profile is received. See you in class.</p>
   </section>
 </main>
 
@@ -103,34 +139,33 @@
   var form = document.getElementById('parq');
   var err = document.getElementById('svError');
   var btn = document.getElementById('svSubmit');
-  function val(name) { var el = form.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; }
-  function txt(name) { return form[name].value.trim(); }
+  function val(n) { var el = form.querySelector('input[name="' + n + '"]:checked'); return el ? el.value : ''; }
+  function all(n) { return Array.prototype.map.call(form.querySelectorAll('input[name="' + n + '"]:checked'), function (e) { return e.value; }).join(', '); }
+  function txt(n) { return form[n].value.trim(); }
+  function today() { return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Qatar', day: 'numeric', month: 'long', year: 'numeric' }); }
+  document.getElementById('todayLbl').textContent = 'Date: ' + today();
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (form.company.value) return;
     var ok = true;
-    // text fields
-    ['name','dob','phone','ename','ephone','signature'].forEach(function (n) {
-      var f = form[n]; var bad = !f.value.trim();
-      f.closest('.sv-q').classList.toggle('sv-invalid', bad); if (bad) ok = false;
-    });
-    // yes/no
-    for (var i = 1; i <= 7; i++) {
-      var fs = form.querySelector('input[name="q' + i + '"]').closest('.sv-q');
-      var has = !!val('q' + i); fs.classList.toggle('sv-invalid', !has); if (!has) ok = false;
-    }
-    var ag = form.agree.checked;
-    if (!ag) { form.agree.closest('.sv-q').classList.add('sv-invalid'); ok = false; }
+    function flag(el, bad) { var q = el.closest('.sv-q'); q.classList.toggle('sv-invalid', bad); if (bad) ok = false; }
+    flag(form.name, !txt('name') || !txt('dob') || !txt('phone'));
+    flag(form.ename, !txt('ename') || !txt('ephone'));
+    for (var i = 1; i <= 5; i++) flag(form.querySelector('input[name="h' + i + '"]'), !val('h' + i));
+    flag(form.agree, !form.agree.checked || !txt('signature'));
     err.hidden = ok;
     if (!ok) { var first = form.querySelector('.sv-invalid'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
 
     var data = {
       submitted: new Date().toISOString(),
       name: txt('name'), dob: txt('dob'), phone: txt('phone'), email: txt('email'),
-      ename: txt('ename'), ephone: txt('ephone'),
-      q1: val('q1'), q2: val('q2'), q3: val('q3'), q4: val('q4'), q5: val('q5'), q6: val('q6'), q7: val('q7'),
-      details: txt('details'), agree: 'Agreed', signature: txt('signature')
+      ename: txt('ename'), erel: txt('erel'), ephone: txt('ephone'),
+      freq: val('freq'), groupbefore: val('groupbefore'), recent: txt('recent'), brk: txt('brk'),
+      parqdate: txt('parqdate'), health: txt('health'), disc: all('disc'), discdetail: txt('discdetail'), other: txt('other'),
+      goals: all('goals'), priority: txt('priority'), perweek: val('perweek'),
+      h1: val('h1'), h2: val('h2'), h3: val('h3'), h4: val('h4'), h5: val('h5'),
+      yesdetail: txt('yesdetail'), agree: 'Agreed', signature: txt('signature'), signdate: today()
     };
     btn.disabled = true;
     btn.querySelector('.store-name').textContent = 'Sending...';
@@ -140,7 +175,6 @@
       document.getElementById('svThanks').hidden = false;
       window.scrollTo(0, 0);
     }
-    if (!ENDPOINT) { console.log('PAR-Q (no endpoint set)'); done(); return; }
     fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) })
       .then(done)
       .catch(function () {
