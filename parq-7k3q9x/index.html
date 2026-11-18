@@ -23,11 +23,11 @@
     <p class="sv-section">Member details</p>
     <fieldset class="sv-q" data-req="you">
       <legend><span class="sv-qn">1</span>Your details <em class="sv-req">required</em></legend>
-      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name"><label class="sv-lbl" for="dob">Date of birth</label><input type="date" id="dob" name="dob"><input type="tel" name="phone" autocomplete="tel" maxlength="30" placeholder="Mobile number"><input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email">
+      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name"><label class="sv-lbl" for="dob">Date of birth</label><input type="date" id="dob" name="dob" data-dob data-req="1"><input type="hidden" name="phone" data-phone data-req="1"><input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email">
     </fieldset>
     <fieldset class="sv-q" data-req="emer">
       <legend><span class="sv-qn">2</span>Emergency contact <em class="sv-req">required</em></legend>
-      <input type="text" name="ename" maxlength="80" placeholder="Contact name"><input type="text" name="erel" maxlength="60" placeholder="Relationship"><input type="tel" name="ephone" maxlength="30" placeholder="Contact number">
+      <input type="text" name="ename" maxlength="80" placeholder="Contact name"><input type="text" name="erel" maxlength="60" placeholder="Relationship"><input type="hidden" name="ephone" data-phone data-req="1">
     </fieldset>
     <p class="sv-section">Training experience</p>
     <fieldset class="sv-q">
@@ -118,7 +118,7 @@
 
     <input type="text" name="company" class="sv-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-    <p class="sv-error" id="svError" role="alert" hidden>Please complete the required fields (details, emergency contact, the five health questions and the declaration).</p>
+    <p class="sv-error" id="svError" role="alert" hidden>Please complete the required fields and fix the highlighted errors (details, emergency contact, the five health questions and the declaration).</p>
     <button type="submit" class="store-btn sv-submit" id="svSubmit">
       <span class="store-small">Send</span>
       <span class="store-name">My profile</span>
@@ -132,6 +132,7 @@
   </section>
 </main>
 
+<script src="/form-validate.js"></script>
 <script>
 (function () {
   var ENDPOINT = "https://script.google.com/macros/s/AKfycbxOy-nnyE86TAoHpVm1uoHK5co7sDV7m2tNRoLTtjPbqWvKv3i7A0loExA00sA-F4qG/exec";
@@ -139,6 +140,7 @@
   var form = document.getElementById('parq');
   var err = document.getElementById('svError');
   var btn = document.getElementById('svSubmit');
+  var LF = LCKDForm.init(form);
   function val(n) { var el = form.querySelector('input[name="' + n + '"]:checked'); return el ? el.value : ''; }
   function all(n) { return Array.prototype.map.call(form.querySelectorAll('input[name="' + n + '"]:checked'), function (e) { return e.value; }).join(', '); }
   function txt(n) { return form[n].value.trim(); }
@@ -153,6 +155,7 @@
     flag(form.name, !txt('name') || !txt('dob') || !txt('phone'));
     flag(form.ename, !txt('ename') || !txt('ephone'));
     for (var i = 1; i <= 5; i++) flag(form.querySelector('input[name="h' + i + '"]'), !val('h' + i));
+    if (!LF.validateAll()) ok = false;
     flag(form.agree, !form.agree.checked || !txt('signature'));
     err.hidden = ok;
     if (!ok) { var first = form.querySelector('.sv-invalid'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }

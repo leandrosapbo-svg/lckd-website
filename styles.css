@@ -599,3 +599,9 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sv-lbl + input { margin-top: 6px !important; }
 .sv-q .sv-choices.sv-yn span { min-width: 84px; }
 .sv-decl { margin-top: 12px; font-size: 0.9rem; line-height: 1.6; color: var(--cream-dim); }
+
+/* Form validation + phone */
+.sv-q select { display: block; width: 100%; margin-top: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); color: var(--cream); font: inherit; font-size: 16px; border-radius: 0; color-scheme: dark; }
+.sv-q select:focus { outline: none; border-color: var(--cream); }
+.sv-fielderr { margin: 8px 0 0; font-size: 0.85rem; color: #e08a7d; }
+.sv-fielderr[hidden] { display: none; }
