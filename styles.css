@@ -622,3 +622,5 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 @media (max-width: 480px) { .sch-page { padding-top: 110px; } .sch-kind { flex-basis: 78px; } }
 .sch-sub { margin: 12px 0 16px; font-size: 0.9rem; color: var(--cream-dim); }
 .sch-btn { display: inline-block; margin: 0 8px 8px 0; }
+.site-footer p a, .links-loc a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(242,237,226,0.35); }
+.site-footer p a:hover, .links-loc a:hover { text-decoration-color: var(--cream); color: var(--cream); }
