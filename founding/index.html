@@ -38,13 +38,13 @@
 
 <main>
 
-  <section class="founding-hero" style="background-image: url('/assets/hero-group.jpg');">
+  <section class="founding-hero" style="background-image: url('/assets/gym-sign.jpg'); background-position: center 45%;">
     <div class="hero-overlay"></div>
     <div class="wrap hero-inner">
       <p class="eyebrow">Founding packages · First 50 members only</p>
       <h1 class="founding-word">Founding<br>members</h1>
       <p class="hero-sub">Be part of LCKD from day one. Choose your membership or class pack, and buy it in the LCKD app.</p>
-      <p class="limit-badge">Limited to the first 50 members</p>
+      <p class="limit-badge" id="foundingBadge">Founding pricing ends Saturday 21 November</p>
       <div class="store-row store-row-hero">
         <a class="store-btn store-btn-ico" href="/app/" data-app-link>
           <span class="store-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M4 17a8 8 0 0 1 16 0zM9 13.2a.95.95 0 1 0 0 1.9.95.95 0 0 0 0-1.9zM15 13.2a.95.95 0 1 0 0 1.9.95.95 0 0 0 0-1.9z"/><path d="M7.6 8 6 5.2M16.4 8 18 5.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></span>
@@ -62,7 +62,7 @@
       <span class="limit-num">50</span>
       <div>
         <h2>Founding spots</h2>
-        <p>Founding pricing is available to the first 50 members only. Regular prices are shown for comparison.</p>
+        <p id="foundingNote">Founding pricing is available to the first 50 members, until Saturday 21 November. After that, regular pricing applies. Regular prices are shown for comparison.</p>
         <p class="start-note">Your package starts counting from the day you book your first class, not the day you buy it.</p>
       </div>
     </div>
@@ -240,6 +240,30 @@
   </div>
 </footer>
 
+<script>
+// Founding pricing ends at the end of Saturday 21 Nov 2026 (Doha time). After that the page shows regular pricing.
+(function () {
+  if (Date.now() < Date.parse('2026-11-22T00:00:00+03:00')) return;
+  document.querySelectorAll('.plan-row').forEach(function (r) {
+    var was = r.querySelector('.was'); if (!was) return;
+    var amt = r.querySelector('.amount'); amt.textContent = was.textContent.replace(' QAR', ''); was.remove();
+    var sv = r.querySelector('.plan-save'); if (sv) sv.remove();
+  });
+  var monthly = ['1,200 QAR / month', '1,100 QAR / month', '1,000 QAR / month', 'About 917 QAR / month'];
+  document.querySelectorAll('.plan-row .plan-info p:not(.plan-save)').forEach(function (p, i) { p.textContent = monthly[i]; });
+  document.querySelectorAll('.pack-card').forEach(function (c, i) {
+    var w = c.querySelector('.pack-was'), pr = c.querySelector('.pack-price');
+    pr.firstChild.textContent = w.textContent.replace(' QAR', '') + ' '; w.remove();
+    var sv = c.querySelector('.pack-save'); if (sv) sv.remove();
+    c.querySelector('.pack-per').innerHTML = (i === 0 ? '75' : '70') + ' QAR per class' + (i === 1 ? ' &middot; Best value' : '');
+  });
+  var b = document.getElementById('foundingBadge'); if (b) b.textContent = 'Founding pricing has ended';
+  var n = document.getElementById('foundingNote'); if (n) n.textContent = 'Founding pricing ended on Saturday 21 November. Regular pricing now applies.';
+  document.querySelectorAll('.eyebrow').forEach(function (e) { if (/Founding packages/.test(e.textContent)) e.textContent = 'Memberships and class packs'; });
+  document.querySelectorAll('.limit-strip h2').forEach(function (h) { h.textContent = 'Regular pricing'; });
+  document.querySelectorAll('.limit-num').forEach(function (h) { h.textContent = ''; });
+})();
+</script>
 <script src="/script.js"></script>
 <script>
 (function () {

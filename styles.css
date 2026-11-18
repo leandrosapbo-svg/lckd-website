@@ -620,3 +620,5 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sch-t.sch-w { background: var(--cream); color: var(--black); }
 .sch-note { margin: 0 0 32px; font-size: 0.8rem; color: var(--cream-dim); }
 @media (max-width: 480px) { .sch-page { padding-top: 110px; } .sch-kind { flex-basis: 78px; } }
+.sch-sub { margin: 12px 0 16px; font-size: 0.9rem; color: var(--cream-dim); }
+.sch-btn { display: inline-block; margin: 0 8px 8px 0; }

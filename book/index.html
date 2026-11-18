@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Founding Members Booking | LCKD Qatar</title>
+<meta name="description" content="Founding members: book your spot in the first LCKD class, Sunday 22 November, 4:30 PM Mixed.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lckd.qa/book">
+<meta property="og:title" content="Founding Members Booking">
+<meta property="og:description" content="Founding members: book your spot in the first LCKD class, Sunday 22 November, 4:30 PM Mixed.">
+<meta property="og:image" content="https://lckd.qa/assets/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="sv-body">
+
+<main class="sv-page">
+  <header class="sv-head">
+    <a href="/" class="links-logo">LCKD</a>
+    <p class="eyebrow center">Founding members only</p>
+    <h1 class="sv-title">Book the<br>first class.</h1>
+    <p class="sv-lede">Sunday 22 November, 4:30 PM. Mixed class. This booking is for founding members only. We will confirm your membership and your spot by WhatsApp.</p>
+  </header>
+
+  <form id="signup" class="sv-form" novalidate>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">1</span>Your details <em class="sv-req">required</em></legend>
+      <p class="sv-hint">Please use the same email you used when you bought your founding membership.</p>
+      <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Full name"><input type="hidden" name="phone" data-phone data-req="1" data-ph="Mobile / WhatsApp number"><input type="email" name="email" autocomplete="email" maxlength="100" placeholder="Email" data-req="1">
+    </fieldset>
+    <fieldset class="sv-q">
+      <legend><span class="sv-qn">2</span>Anything we should know? <em class="sv-opt">optional</em></legend>
+      <textarea name="notes" rows="3" maxlength="500" placeholder="Injuries, a friend joining, questions..."></textarea>
+    </fieldset>
+
+    <input type="text" name="company" class="sv-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="sv-error" id="svError" role="alert" hidden>Please fill in the required fields.</p>
+    <button type="submit" class="store-btn sv-submit" id="svSubmit">
+      <span class="store-small">Book</span>
+      <span class="store-name">my spot</span>
+    </button>
+    <p class="sv-fine">Your details go to the LCKD team only.</p>
+  </form>
+
+  <section class="sv-thanks" id="svThanks" hidden>
+    <h2 class="sv-title">Request received.</h2>
+    <p class="sv-lede">We will confirm your founding membership and your spot for Sunday 22 November, 4:30 PM by WhatsApp. Not a founding member yet? Founding memberships are available until Saturday 21 November.</p>
+    <a class="store-btn sv-submit" href="https://maps.app.goo.gl/58rnfUzML4dLQSiM9" target="_blank" rel="noopener"><span class="store-small">Find us on</span><span class="store-name">Google Maps</span></a>
+  </section>
+</main>
+
+<script src="/form-validate.js"></script>
+<script>
+(function () {
+  var ENDPOINT = "https://script.google.com/macros/s/AKfycbw9ngTAhrCTj_m_TyFVyZL3DLZMmdCDL8QXIByK2mXfKlXkwsE9cl-AZcvm4b5V0_xW/exec";
+  var form = document.getElementById('signup');
+  var err = document.getElementById('svError');
+  var btn = document.getElementById('svSubmit');
+  var LF = LCKDForm.init(form);
+  function val(n) { var el = form.querySelector('input[name="' + n + '"]:checked'); return el ? el.value : ''; }
+  function txt(n) { var f = form[n]; return f ? f.value.trim() : ''; }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (form.company.value) return;
+    var ok = true;
+    ['name','phone','email'].forEach(function (n) { var bad = !txt(n); form[n].closest('.sv-q').classList.toggle('sv-invalid', bad); if (bad) ok = false; });
+    [].forEach(function (n) { var bad = !val(n); form.querySelector('input[name="' + n + '"]').closest('.sv-q').classList.toggle('sv-invalid', bad); if (bad) ok = false; });
+    if (!LF.validateAll()) ok = false;
+    err.hidden = ok;
+    if (!ok) { var first = form.querySelector('.sv-invalid, .sv-fielderr:not([hidden])'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    var data = { type: 'booking', submitted: new Date().toISOString(), name: txt('name'), phone: txt('phone'), email: txt('email'), notes: txt('notes') };
+    btn.disabled = true;
+    btn.querySelector('.store-name').textContent = 'Sending...';
+    function done() {
+      form.hidden = true; document.querySelector('.sv-head').hidden = true;
+      document.getElementById('svThanks').hidden = false; window.scrollTo(0, 0);
+    }
+    if (ENDPOINT.indexOf('__') > -1) { btn.disabled = false; btn.querySelector('.store-name').textContent = 'Try again'; err.textContent = 'Sign-up is not available yet.'; err.hidden = false; return; }
+    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) })
+      .then(done)
+      .catch(function () {
+        btn.disabled = false; btn.querySelector('.store-name').textContent = 'Try again';
+        err.textContent = 'Could not send. Check your connection and try again.'; err.hidden = false;
+      });
+  });
+})();
+</script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "35cb9af7f3b14db8a40831c992ae7778"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
