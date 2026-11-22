@@ -615,6 +615,7 @@ a.pack-card:not(.pack-card-dark):hover { background: #e9e3d6; }
 .sch-grid { display: grid; gap: 14px; margin: 40px 0 20px; text-align: left; }
 .sch-day { border: 1px solid var(--line); background: var(--panel); padding: 20px 22px; }
 .sch-name { margin: 0 0 14px; font-size: 1rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cream); }
+.sch-focus { margin: -8px 0 12px; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cream-dim); }
 .sch-line { display: flex; align-items: flex-start; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); }
 .sch-kind { flex: 0 0 96px; padding-top: 7px; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cream-dim); }
 .sch-times { display: flex; flex-wrap: wrap; gap: 8px; }
