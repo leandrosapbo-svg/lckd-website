@@ -375,6 +375,8 @@ section { padding: 100px 0; border-bottom: 1px solid var(--line); }
   position: relative;
   overflow: hidden;
 }
+.pack-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.pack-valid { font-size: 15px; font-weight: 600; margin: 6px 0 0; }
 .pack-card-dark { background: var(--black); color: var(--cream); }
 .pack-count {
   display: block;
