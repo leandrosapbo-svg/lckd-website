@@ -63,7 +63,11 @@ const FIRST_M = ['Omar', 'Khalid', 'Ali', 'Yousef', 'Hamad', 'Karim', 'Faisal', 
 const LAST = ['Al Thani', 'Haddad', 'Rahman', 'Santos', 'Khan', 'Nasser', 'Mansour', 'Silva', 'Farouk', 'Ibrahim', 'Costa', 'Hassan', 'Qasim', 'Petrov', 'Demir', 'Said'];
 
 export function dohaToday() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Qatar' }).format(new Date());
+  // built from parts, because the "en-CA" shortcut formats dates differently in different engines
+  const o = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Qatar', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date()).forEach((p) => { o[p.type] = p.value; });
+  return o.year + '-' + o.month + '-' + o.day;
 }
 
 function dohaMinutes() {
@@ -108,6 +112,39 @@ function pick(weights, rand) {
 
 // Real bookings: the latest snapshot saved by /api/admin/ingest.
 // Demo numbers are only ever used when DEMO=1 is set (local runs), never on the live site.
+// ----- demo helpers (local runs only) -----
+function fakePid(text) {
+  const rand = seeded('pid:' + text);
+  let s = '';
+  for (let i = 0; i < 16; i++) s += 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(rand() * 36)];
+  return s;
+}
+
+// A made-up history for a made-up student (same pid always gives the same history)
+export function demoHistoryRows(pid, today) {
+  const rand = seeded('history:' + pid);
+  const times = Object.keys(DEMAND);
+  const n = 2 + Math.floor(rand() * 22);
+  const rows = [];
+  const used = new Set();
+  for (let i = 0; i < n; i++) {
+    const back = Math.floor(rand() * 21) - 2; // from 2 days ahead to 18 days back
+    const date = addDays(today, -back);
+    const time = times[Math.floor(rand() * times.length)];
+    if (used.has(date + time)) continue;
+    used.add(date + time);
+    const future = date >= today;
+    rows.push({
+      date, time,
+      status: future ? 'booked' : (rand() < 0.08 ? 'noshow' : rand() < 0.05 ? 'cancelled' : 'completed'),
+      type: pick(TYPE_WEIGHTS, rand),
+      zone: pick(ZONE_WEIGHTS, rand),
+      spot: 1 + Math.floor(rand() * 14),
+    });
+  }
+  return rows;
+}
+
 export async function getBookings(date, env) {
   if (env.DEMO === '1') return sampleBookings(date);
   if (!env.BOOKINGS) throw new Error('Bookings storage is not set up.');
@@ -152,8 +189,10 @@ async function sampleBookings(date) {
       let gender = s.kind === 'Ladies only' || rand() < 0.58 ? 'F' : 'M';
       if (type === 'g8ts' && rand() < 0.2) gender = ''; // app bookings often have no gender on file
       const first = gender === 'M' ? FIRST_M : FIRST_F;
+      const fullName = first[Math.floor(rand() * first.length)] + ' ' + LAST[Math.floor(rand() * LAST.length)];
       students.push({
-        name: first[Math.floor(rand() * first.length)] + ' ' + LAST[Math.floor(rand() * LAST.length)],
+        name: fullName,
+        pid: fakePid(fullName),
         zone,
         spot,
         type,

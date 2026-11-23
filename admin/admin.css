@@ -207,6 +207,29 @@ input[type=text], input[type=password] {
 .ttag.pack { color: #b79cff; border-color: #b79cff; }
 .ttag.ns { color: var(--bad); border-color: var(--bad); }
 
+/* Info button on a student + the history view */
+.info { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--cream); font: italic 700 17px Georgia, "Times New Roman", serif; display: grid; place-items: center; padding: 0; }
+.info:active { background: var(--line); }
+.stu { padding-right: 0; }
+.back { display: inline-flex; align-items: center; height: 40px; margin: 0 0 12px -8px; padding: 0 12px 0 8px; border: 0; background: none; color: var(--dim); font-size: 15px; font-weight: 600; }
+.plans { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.plan { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--cream); color: var(--cream); }
+.plan.pack { border-color: #b79cff; color: #b79cff; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 22px; }
+.stat { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.stat span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+.stat b { display: block; font-size: 19px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat.bad b { color: var(--bad); }
+.hrow { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hdate { flex: 1; min-width: 0; }
+.hdate b { display: block; font-size: 16px; }
+.hdate span { display: block; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.ttag.st-completed { color: #7ddc9a; border-color: #7ddc9a; }
+.ttag.st-noshow { color: var(--bad); border-color: var(--bad); }
+.ttag.st-booked { color: var(--cream); border-color: var(--cream); }
+.ttag.st-cancelled { color: var(--dim); text-decoration: line-through; }
+.note { margin: 18px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--panel-2); color: var(--dim); font-size: 13px; }
+
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(40px); opacity: 0; } }
 

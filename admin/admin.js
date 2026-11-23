@@ -15,7 +15,7 @@
   var MIN_DAYS = -120, MAX_DAYS = 60;
   var STALE_MINUTES = 45; // warn when today's numbers are older than this
 
-  var state = { date: null, data: null, reqId: 0, open: null, lastFocus: null, loadedAt: 0, autoScroll: false };
+  var state = { date: null, data: null, reqId: 0, open: null, lastFocus: null, loadedAt: 0, autoScroll: false, hist: {}, studentsScroll: 0 };
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -25,7 +25,11 @@
 
   /* ---------- Doha dates ---------- */
   function dohaToday() {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Qatar' }).format(new Date());
+    // built from parts, because the "en-CA" shortcut formats dates differently in different browsers
+    var o = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Qatar', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date()).forEach(function (p) { o[p.type] = p.value; });
+    return o.year + '-' + o.month + '-' + o.day;
   }
   function dohaMinutes() {
     var h = 0, m = 0;
@@ -282,7 +286,8 @@
 
     if (state.open) {
       var open = findClass(state.open.id);
-      if (open) fillSheet(open, state.open.mode); else closeSheet();
+      if (!open) closeSheet();
+      else if (state.open.mode !== 'student') fillSheet(open, state.open.mode); // a student's history view is left alone
     }
   }
 
@@ -341,7 +346,105 @@
     return '<div class="stu"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
       '<span class="stu-name"><i class="dot ' + g + '"></i><span>' + esc(p.name) + '</span></span>' +
       (p.status === 'noshow' ? '<span class="ttag ns">No show</span>' : '') +
-      '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span></div>';
+      '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span>' +
+      (p.pid ? '<button type="button" class="info" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="History of ' + esc(p.name) + '">i</button>' : '') +
+      '</div>';
+  }
+
+  /* ---------- One student's history ---------- */
+  var STATUS_LABEL = { completed: 'Attended', noshow: 'No show', booked: 'Booked', cancelled: 'Cancelled' };
+  var ZONE_NAME = { S: 'Strength', C: 'Cardio', H: 'Hybrid' };
+
+  function dayMonth(d) {
+    return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  }
+
+  function openStudent(pid, name) {
+    if (!state.open) return;
+    var c = findClass(state.open.id);
+    state.open = { id: state.open.id, mode: 'student', pid: pid, name: name };
+    $('sheetKind').textContent = 'Student history';
+    $('sheetTitle').textContent = name;
+    $('sheetSub').textContent = c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '';
+    $('sheetBody').innerHTML = backButton() + '<div class="skel" style="height:120px"></div><div class="skel" style="height:200px"></div>';
+    $('sheetPanel').scrollTop = 0;
+
+    if (state.hist[pid]) { renderStudent(state.hist[pid]); return; }
+    api('/api/admin/student?pid=' + encodeURIComponent(pid)).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!state.open || state.open.pid !== pid) return;
+      if (!r.ok) { $('sheetBody').innerHTML = backButton() + '<p class="none">' + esc(r.body.error || 'Could not load the history.') + '</p>'; return; }
+      state.hist[pid] = r.body;
+      renderStudent(r.body);
+    }).catch(function () {
+      if (state.open && state.open.pid === pid) $('sheetBody').innerHTML = backButton() + '<p class="none">No connection.</p>';
+    });
+  }
+
+  function backButton() {
+    return '<button type="button" class="back" data-back>‹ Back to students</button>';
+  }
+
+  function backToStudents() {
+    if (!state.open) return;
+    var c = findClass(state.open.id);
+    if (!c) { closeSheet(); return; }
+    state.open = { id: state.open.id, mode: 'students' };
+    fillSheet(c, 'students');
+    $('sheetPanel').scrollTop = state.studentsScroll || 0;
+  }
+
+  function renderStudent(h) {
+    var s = h.summary || {};
+    var html = backButton();
+
+    // plan
+    if (h.plan && h.plan.length) {
+      html += '<div class="plans">' + h.plan.map(function (p) {
+        return '<span class="plan ' + esc(p.kind) + '">' + esc(p.name) + (p.until ? ' · until ' + esc(dayMonth(p.until)) : '') + '</span>';
+      }).join('') + '</div>';
+    }
+
+    if (!s.booked) {
+      html += '<p class="none">No classes found for this student yet.</p>';
+    } else {
+      html += '<div class="big"><b>' + s.attended + '</b><span>classes attended</span></div>' +
+        '<div class="stats">' +
+        stat('First class', s.firstClass ? dayMonth(s.firstClass) : '-') +
+        stat('Last visit', s.lastVisit ? dayMonth(s.lastVisit) : 'Not yet') +
+        stat('Per week', s.perWeek ? String(s.perWeek) : '-') +
+        stat('Booked ahead', String(s.upcoming || 0)) +
+        stat('No-shows', String(s.noShows || 0), s.noShows ? 'bad' : '') +
+        stat('Cancelled', String(s.cancelled || 0)) +
+        stat('Usual time', s.usualTime || '-') +
+        stat('Favorite zone', s.favZone ? (ZONE_NAME[s.favZone] || s.favZone) : '-') +
+        '</div>';
+
+      var types = {};
+      Object.keys(s.types || {}).forEach(function (k) { types[k] = { women: s.types[k], men: 0, unk: 0 }; });
+      html += '<h3>How they booked</h3>' + typeGrid(types);
+    }
+
+    if (h.recent && h.recent.length) {
+      html += '<h3>Recent classes</h3>' + h.recent.map(function (r) {
+        var where = [r.zone ? r.zone + (r.spot ? ' ' + r.spot : '') : '', r.kind === 'Ladies only' ? 'Ladies only' : ''].filter(Boolean).join(' · ');
+        return '<div class="hrow"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span></div>' +
+          (r.type ? '<span class="ttag ' + esc(r.type) + '">' + esc(typeShort(r.type)) + '</span>' : '') +
+          '<span class="ttag st-' + esc(r.status || 'booked') + '">' + esc(STATUS_LABEL[r.status] || 'Booked') + '</span></div>';
+      }).join('');
+      if (h.total > h.recent.length) html += '<p class="none">Showing the latest ' + h.recent.length + ' of ' + h.total + ' classes.</p>';
+    }
+
+    if (h.limitedSince) {
+      html += '<p class="note">Booked through the G8TS app, so there is no full profile. History only goes back to ' + esc(dayMonth(h.limitedSince)) + ', when we first saved it.</p>';
+    } else if (!h.hasProfile && !s.booked) {
+      html += '<p class="note">History appears after the next sync.</p>';
+    }
+    $('sheetBody').innerHTML = html;
+  }
+
+  function stat(label, value, cls) {
+    return '<div class="stat' + (cls ? ' ' + cls : '') + '"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
   }
 
   function openSheet(id, mode) {
@@ -371,13 +474,29 @@
   });
 
   $('sheet').addEventListener('click', function (e) {
-    if (e.target.closest && e.target.closest('[data-close]')) closeSheet();
+    var t = e.target.closest ? e.target : null;
+    if (!t) return;
+    if (t.closest('[data-close]')) { closeSheet(); return; }
+    var back = t.closest('[data-back]');
+    if (back) { backToStudents(); return; }
+    var info = t.closest('.info');
+    if (info) {
+      state.studentsScroll = $('sheetPanel').scrollTop;
+      openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'));
+    }
   });
 
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;
     if (e.key === 'Escape') closeSheet();
-    if (e.key === 'Tab') { e.preventDefault(); $('sheet').querySelector('.sheet-head .icon').focus(); }
+    if (e.key === 'Tab') {
+      // keep keyboard focus inside the popup
+      var f = [].slice.call($('sheetPanel').querySelectorAll('button')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
+      if (!f.length) return;
+      var i = f.indexOf(document.activeElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+    }
   });
 
   $('prev').addEventListener('click', function () { setDate(addDays(state.date, -1)); });

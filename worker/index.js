@@ -11,6 +11,7 @@ import { onRequestPost as login } from './routes/login.js';
 import { onRequestPost as logout } from './routes/logout.js';
 import { onRequestGet as bookings } from './routes/bookings.js';
 import { onRequest as ingest } from './routes/ingest.js';
+import { onRequestGet as student } from './routes/student.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -25,6 +26,7 @@ export default {
       if (pathname === '/api/admin/login') return request.method === 'POST' ? await login(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/logout') return request.method === 'POST' ? await logout(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/bookings') return request.method === 'GET' ? await bookings(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/student') return request.method === 'GET' ? await student(c) : json({ error: 'Method not allowed.' }, 405);
       return json({ error: 'Not found.' }, 404);
     } catch (e) {
       return json({ error: 'Something went wrong.' }, 500);
