@@ -196,7 +196,8 @@ input[type=text], input[type=password] {
 .stu { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .spot { flex: none; width: 46px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--panel-2); border-radius: 8px; padding: 6px 0; color: var(--cream); }
 .stu-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 600; }
-.stu-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stu-name .nm { display: flex; flex-direction: column; min-width: 0; }
+.nm-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }
 .dot.w { background: var(--women); }
 .dot.m { background: var(--men); }
@@ -206,6 +207,12 @@ input[type=text], input[type=password] {
 .ttag.membership { color: var(--cream); }
 .ttag.pack { color: #b79cff; border-color: #b79cff; }
 .ttag.ns { color: var(--bad); border-color: var(--bad); }
+
+/* A student's very first class ever: the whole line is tinted so a coach spots it at a glance */
+.firstcap { display: block; margin-top: 1px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--warn); }
+.stu.first, .hrow.first { background: rgba(245, 184, 75, 0.12); box-shadow: inset 3px 0 0 var(--warn); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; }
+.stu.first { margin: 3px 0; padding-right: 6px; }
+.hrow.first { margin: 3px 0; padding-right: 8px; }
 
 /* Info button on a student + the history view */
 .info { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--cream); font: italic 700 17px Georgia, "Times New Roman", serif; display: grid; place-items: center; padding: 0; }

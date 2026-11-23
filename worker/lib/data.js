@@ -198,6 +198,7 @@ async function sampleBookings(date) {
         type,
         gender,
         status: isPast ? (rand() < 0.07 ? 'noshow' : 'completed') : 'enrolled',
+        first: type === 'trial' && rand() < 0.5 ? true : undefined,
       });
     }
     students.sort((a, b) => ZONES.findIndex((z) => z.key === a.zone) - ZONES.findIndex((z) => z.key === b.zone) || a.spot - b.spot);

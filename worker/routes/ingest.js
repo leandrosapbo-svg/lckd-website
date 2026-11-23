@@ -59,7 +59,7 @@ function cleanClass(c) {
     const gender = p.gender === 'F' || p.gender === 'M' ? p.gender : '';
     const name = str(p.name, 80);
     if (!name) continue;
-    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status });
+    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined });
   }
   return { id: str(c.id, 40) || null, time, kind: c.kind, name: str(c.name, 120), students };
 }

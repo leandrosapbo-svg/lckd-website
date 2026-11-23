@@ -344,8 +344,9 @@
 
   function studentRow(p) {
     var g = p.gender === 'F' ? 'w' : p.gender === 'M' ? 'm' : 'u';
-    return '<div class="stu"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
-      '<span class="stu-name"><i class="dot ' + g + '"></i><span>' + esc(p.name) + '</span></span>' +
+    return '<div class="stu' + (p.first ? ' first' : '') + '"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
+      '<span class="stu-name"><i class="dot ' + g + '"></i><span class="nm"><span class="nm-t">' + esc(p.name) + '</span>' +
+      (p.first ? '<small class="firstcap">First class ever</small>' : '') + '</span></span>' +
       (p.status === 'noshow' ? '<span class="ttag ns">No show</span>' : '') +
       '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span>' +
       (p.pid ? '<button type="button" class="info" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="History of ' + esc(p.name) + '">i</button>' : '') +
@@ -424,9 +425,17 @@
     }
 
     if (h.recent && h.recent.length) {
-      html += '<h3>Recent classes</h3>' + h.recent.map(function (r) {
+      // their very first class (the oldest row with the first-class date), if it is among the rows shown
+      var firstIdx = -1;
+      if (s.firstClass) {
+        for (var fi = h.recent.length - 1; fi >= 0; fi--) {
+          if (h.recent[fi].date === s.firstClass && h.recent[fi].status !== 'cancelled') { firstIdx = fi; break; }
+        }
+      }
+      html += '<h3>Recent classes</h3>' + h.recent.map(function (r, idx) {
         var where = [r.zone ? r.zone + (r.spot ? ' ' + r.spot : '') : '', r.kind === 'Ladies only' ? 'Ladies only' : ''].filter(Boolean).join(' · ');
-        return '<div class="hrow"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span></div>' +
+        return '<div class="hrow' + (idx === firstIdx ? ' first' : '') + '"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span>' +
+          (idx === firstIdx ? '<small class="firstcap">First class ever</small>' : '') + '</div>' +
           (r.type ? '<span class="ttag ' + esc(r.type) + '">' + esc(typeShort(r.type)) + '</span>' : '') +
           '<span class="ttag st-' + esc(r.status || 'booked') + '">' + esc(STATUS_LABEL[r.status] || 'Booked') + '</span></div>';
       }).join('');
