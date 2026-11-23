@@ -1,0 +1,22 @@
+{
+  // Must match the name of the Worker in Cloudflare (lckd-website.leandrosapbo.workers.dev)
+  "name": "lckd-website",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-01-01",
+  "keep_vars": true,
+
+  // The website: every file in this folder is served as-is (see .assetsignore for what is left out).
+  // The Worker script sees each request first, answers /api/admin/* itself and hands everything
+  // else to the static files untouched.
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+
+  // Where the coaches' booking snapshots are kept (create it in Cloudflare > Storage & Databases > KV,
+  // then paste its ID here).
+  "kv_namespaces": [
+    { "binding": "BOOKINGS", "id": "517dae76664c47ccbb23a22ee4239f29" }
+  ]
+}
