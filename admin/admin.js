@@ -410,12 +410,8 @@
     } else {
       html += '<div class="big"><b>' + s.attended + '</b><span>classes attended</span></div>' +
         '<div class="stats">' +
-        stat('First class', s.firstClass ? dayMonth(s.firstClass) : '-') +
+        stat('Member for', memberFor(s.firstClass), s.firstClass ? 'since ' + dayMonth(s.firstClass) : '') +
         stat('Last visit', s.lastVisit ? dayMonth(s.lastVisit) : 'Not yet') +
-        stat('Per week', s.perWeek ? String(s.perWeek) : '-') +
-        stat('Booked ahead', String(s.upcoming || 0)) +
-        stat('No-shows', String(s.noShows || 0), s.noShows ? 'bad' : '') +
-        stat('Cancelled', String(s.cancelled || 0)) +
         stat('Usual time', s.usualTime || '-') +
         stat('Favorite zone', s.favZone ? (ZONE_NAME[s.favZone] || s.favZone) : '-') +
         '</div>';
@@ -443,8 +439,19 @@
     $('sheetBody').innerHTML = html;
   }
 
-  function stat(label, value, cls) {
-    return '<div class="stat' + (cls ? ' ' + cls : '') + '"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
+  function stat(label, value, sub) {
+    return '<div class="stat"><span>' + esc(label) + '</span><b>' + esc(value) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>';
+  }
+
+  // "3 weeks", "5 days" ... how long since their first class
+  function memberFor(first) {
+    if (!first) return '-';
+    var days = Math.round((Date.parse(dohaToday()) - Date.parse(first)) / 86400000);
+    if (days < 1) return 'New';
+    if (days < 14) return days + (days === 1 ? ' day' : ' days');
+    if (days < 60) return Math.floor(days / 7) + ' weeks';
+    var m = Math.floor(days / 30.4);
+    return m + (m === 1 ? ' month' : ' months');
   }
 
   function openSheet(id, mode) {

@@ -219,7 +219,7 @@ input[type=text], input[type=password] {
 .stat { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .stat span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
 .stat b { display: block; font-size: 19px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stat.bad b { color: var(--bad); }
+.stat small { display: block; margin-top: 1px; font-size: 12px; color: var(--dim); }
 .hrow { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .hdate { flex: 1; min-width: 0; }
 .hdate b { display: block; font-size: 16px; }
