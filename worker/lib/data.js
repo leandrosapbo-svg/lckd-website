@@ -161,7 +161,12 @@ export async function getBookings(date, env) {
   if (!env.BOOKINGS) throw new Error('Bookings storage is not set up.');
   const saved = await env.BOOKINGS.get('day:' + date, 'json');
   if (!saved) return { date, source: 'live', updated: null, capacity: 50, zones: ZONES, classes: [], noData: true };
-  return { ...saved, source: 'live', zones: ZONES };
+  // A snapshot is only rewritten when something changed, so "updated" is when the last sync that covered this day
+  // looked at it (kept in meta:sync), not when the numbers last changed.
+  let updated = saved.updated;
+  const meta = await env.BOOKINGS.get('meta:sync', 'json');
+  if (meta && meta.at && meta.from <= date && date <= meta.to && meta.at > updated) updated = meta.at;
+  return { ...saved, updated, source: 'live', zones: ZONES };
 }
 
 async function sampleBookings(date) {

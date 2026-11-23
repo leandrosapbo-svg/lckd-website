@@ -135,7 +135,9 @@ export async function onRequest({ request, env }) {
   const pidCache = new Map();
   const pidOf = async (pin) => { if (!pidCache.has(pin)) pidCache.set(pin, await makePid(env, pin)); return pidCache.get(pin); };
 
-  const saved = [];
+  // Cloudflare's free KV plan allows 1,000 writes a day (and 100,000 reads), so nothing is written when it is
+  // identical to what is already stored. Reading is cheap; writing is the scarce thing.
+  const saved = [], same = [];
   for (const day of days || []) {
     if (!day || !isDate(day.date) || !Array.isArray(day.classes) || day.classes.length > 20) return json({ error: 'Bad day.' }, 400, cors);
     const classes = day.classes.map(cleanClass);
@@ -148,15 +150,29 @@ export async function onRequest({ request, env }) {
       }
     }
     classes.sort((a, b) => a.time.localeCompare(b.time) || a.kind.localeCompare(b.kind));
+    const prev = await env.BOOKINGS.get('day:' + day.date, 'json');
+    if (prev && JSON.stringify(prev.classes) === JSON.stringify(classes)) { same.push(day.date); continue; }
     await env.BOOKINGS.put('day:' + day.date, JSON.stringify({ date: day.date, updated: now, capacity: 50, classes }), { expirationTtl: KEEP_SECONDS });
     saved.push(day.date);
   }
+  // "Last checked" lives in one small record, so a sync that changed nothing still shows as fresh on the page
+  // (the page uses it for the days it covers) at the cost of a single write.
+  if (days && days.length) {
+    const dates = days.map((d) => d.date).sort();
+    await env.BOOKINGS.put('meta:sync', JSON.stringify({ at: now, from: dates[0], to: dates[dates.length - 1] }), { expirationTtl: KEEP_SECONDS });
+  }
 
-  let savedHistories = 0;
+  // (each KV lookup counts toward the 50 a request may make, so comparing is only done for small batches)
+  const canCompare = !days && (histories || []).length <= 20;
+  let savedHistories = 0, sameHistories = 0;
   for (const h of histories || []) {
     const clean = cleanHistory(h);
     if (!clean) continue;
     const pid = await pidOf(clean.pin);
+    if (canCompare) {
+      const prev = await env.BOOKINGS.get('hist:' + pid, 'json');
+      if (prev && JSON.stringify({ plan: prev.plan, bookings: prev.bookings }) === JSON.stringify({ plan: clean.plan, bookings: clean.bookings })) { sameHistories++; continue; }
+    }
     await env.BOOKINGS.put('hist:' + pid, JSON.stringify({ updated: now, plan: clean.plan, bookings: clean.bookings }), { expirationTtl: KEEP_SECONDS });
     savedHistories++;
   }
@@ -166,10 +182,13 @@ export async function onRequest({ request, env }) {
     const list = [];
     for (const p of directory.people) list.push({ p: await pidOf(p.pin), n: p.name, t: p.phone });
     list.sort((a, b) => (a.n < b.n ? -1 : a.n > b.n ? 1 : 0));
-    await env.BOOKINGS.put('dir:' + directory.shard, JSON.stringify(list), { expirationTtl: KEEP_SECONDS });
-    forgetDirectory();
-    savedPeople = list.length;
+    const text = JSON.stringify(list);
+    if ((await env.BOOKINGS.get('dir:' + directory.shard, 'text')) !== text) {
+      await env.BOOKINGS.put('dir:' + directory.shard, text, { expirationTtl: KEEP_SECONDS });
+      forgetDirectory();
+      savedPeople = list.length;
+    }
   }
 
-  return json({ ok: true, saved, histories: savedHistories, people: savedPeople, updated: now }, 200, cors);
+  return json({ ok: true, saved, same, histories: savedHistories, historiesSame: sameHistories, people: savedPeople, updated: now }, 200, cors);
 }
