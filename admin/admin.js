@@ -14,8 +14,11 @@
   var CLASS_MINUTES = 60; // a class counts as "now" for this long after it starts
   var MIN_DAYS = -120, MAX_DAYS = 60;
   var STALE_MINUTES = 45; // warn when today's numbers are older than this
+  var HIST_CACHE_MS = 2 * 60 * 1000; // a student's history is reused for this long, then read again
+  var SEARCH_DELAY = 220;            // wait for a pause in typing before searching
 
   var state = { date: null, data: null, reqId: 0, open: null, lastFocus: null, loadedAt: 0, autoScroll: false, hist: {}, studentsScroll: 0 };
+  var search = { id: 0, timer: 0, openIfOne: false, shown: 0 };
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -74,6 +77,8 @@
   function showLogin() {
     closeSheet();
     state.data = null;
+    state.hist = {};
+    resetSearch();
     $('main').hidden = true;
     $('login').hidden = false;
     $('loginError').hidden = true;
@@ -284,7 +289,8 @@
       }
     }
 
-    if (state.open) {
+    // (a student opened from the search box does not belong to any class, so it is left alone)
+    if (state.open && !(state.open.mode === 'student' && state.open.from === 'search')) {
       var open = findClass(state.open.id);
       if (!open) closeSheet();
       else if (state.open.mode !== 'student') fillSheet(open, state.open.mode); // a student's history view is left alone
@@ -361,23 +367,37 @@
     return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   }
 
-  function openStudent(pid, name) {
-    if (!state.open) return;
-    var c = findClass(state.open.id);
-    state.open = { id: state.open.id, mode: 'student', pid: pid, name: name };
+  // from = 'class' (the "i" button in a class's student list) or 'search' (a result of the search box at the top)
+  function openStudent(pid, name, from, phone) {
+    var fromSearch = from === 'search';
+    var c = null;
+    if (fromSearch) {
+      if ($('sheet').hidden) {
+        state.lastFocus = document.activeElement;
+        $('sheet').hidden = false;
+        document.body.classList.add('locked');
+      }
+      state.open = { id: null, mode: 'student', pid: pid, name: name, from: 'search' };
+    } else {
+      if (!state.open) return;
+      c = findClass(state.open.id);
+      state.open = { id: state.open.id, mode: 'student', pid: pid, name: name, from: 'class' };
+    }
     $('sheetKind').textContent = 'Student history';
-    $('sheetClose').setAttribute('aria-label', 'Back to students');
+    $('sheetClose').setAttribute('aria-label', fromSearch ? 'Close' : 'Back to students');
     $('sheetTitle').textContent = name;
-    $('sheetSub').textContent = c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '';
+    $('sheetSub').textContent = fromSearch ? (phone || 'No phone number saved') : (c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '');
     $('sheetBody').innerHTML = backButton() + '<div class="skel" style="height:120px"></div><div class="skel" style="height:200px"></div>';
     $('sheetPanel').scrollTop = 0;
+    if (fromSearch) $('sheet').querySelector('.sheet-head .icon').focus();
 
-    if (state.hist[pid]) { renderStudent(state.hist[pid]); return; }
+    var cached = state.hist[pid];
+    if (cached && Date.now() - cached.at < HIST_CACHE_MS) { renderStudent(cached.data); return; }
     api('/api/admin/student?pid=' + encodeURIComponent(pid)).then(function (r) {
       if (r.status === 401) { showLogin(); return; }
       if (!state.open || state.open.pid !== pid) return;
       if (!r.ok) { $('sheetBody').innerHTML = backButton() + '<p class="none">' + esc(r.body.error || 'Could not load the history.') + '</p>'; return; }
-      state.hist[pid] = r.body;
+      state.hist[pid] = { at: Date.now(), data: r.body };
       renderStudent(r.body);
     }).catch(function () {
       if (state.open && state.open.pid === pid) $('sheetBody').innerHTML = backButton() + '<p class="none">No connection.</p>';
@@ -385,11 +405,13 @@
   }
 
   function backButton() {
-    return '<button type="button" class="back" data-back>‹ Back to students</button>';
+    var s = state.open && state.open.from === 'search';
+    return '<button type="button" class="back" data-back>‹ ' + (s ? 'Back to search' : 'Back to students') + '</button>';
   }
 
   function backToStudents() {
     if (!state.open) return;
+    if (state.open.from === 'search') { closeSheet(); return; } // the search results are still there underneath
     var c = findClass(state.open.id);
     if (!c) { closeSheet(); return; }
     state.open = { id: state.open.id, mode: 'students' };
@@ -485,6 +507,127 @@
     if (state.lastFocus && state.lastFocus.focus) { try { state.lastFocus.focus(); } catch (e) { /* ignore */ } }
   }
 
+  /* ---------- Student search (name or phone number) ---------- */
+  var CHEVRON = '<svg class="rgo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+
+  function showResults(html) {
+    var r = $('results');
+    r.innerHTML = html;
+    r.hidden = !html;
+    fitResults();
+  }
+  function closeResults() { $('results').hidden = true; }
+  function rmsg(html) { return '<p class="rmsg">' + html + '</p>'; }
+
+  // keep the list inside the part of the screen that is left when the phone keyboard is open
+  function fitResults() {
+    var r = $('results');
+    if (r.hidden) return;
+    var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    r.style.maxHeight = Math.max(160, Math.min(520, vh - r.getBoundingClientRect().top - 12)) + 'px';
+  }
+
+  function resetSearch() {
+    clearTimeout(search.timer);
+    search.id++;
+    search.openIfOne = false;
+    $('q').value = '';
+    $('qClear').hidden = true;
+    showResults('');
+  }
+
+  // text with letters -> a name (2+ letters); only digits -> a phone number (3+ digits)
+  function searchReady(q) {
+    var hasLetter = /[^\d\s+().-]/.test(q);
+    return hasLetter ? q.replace(/\s/g, '').length >= 2 : q.replace(/\D/g, '').length >= 3;
+  }
+
+  function runSearch() {
+    clearTimeout(search.timer);
+    var q = $('q').value.trim();
+    $('qClear').hidden = !$('q').value;
+    var id = ++search.id;
+    if (!q) { showResults(''); return; }
+    if (!searchReady(q)) { search.shown = 0; showResults(rmsg('Type at least 2 letters of a name, or 3 digits of a phone number.')); return; }
+    if ($('results').hidden || !search.shown) showResults(rmsg('Searching…'));
+    api('/api/admin/search?q=' + encodeURIComponent(q)).then(function (r) {
+      if (id !== search.id) return;
+      if (r.status === 401) { showLogin(); return; }
+      if (!r.ok) { search.shown = 0; showResults(rmsg('Could not search. Try again.')); return; }
+      renderResults(r.body, q);
+    }).catch(function () {
+      if (id === search.id) { search.shown = 0; showResults(rmsg('No connection.')); }
+    });
+  }
+
+  function renderResults(b, q) {
+    var list = b.results || [];
+    search.shown = list.length;
+    if (!b.ready) {
+      showResults(rmsg('The student list has not been synced yet. It appears after the next sync.'));
+      return;
+    }
+    if (!list.length) {
+      showResults(rmsg('No student found for <b>' + esc(q) + '</b>.<br>Try fewer letters, or the phone number.'));
+      return;
+    }
+    var html = list.map(function (p) {
+      return '<button type="button" class="rrow" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" data-phone="' + esc(p.phone || '') + '">' +
+        '<span class="rtext"><span class="rname">' + esc(p.name) + '</span>' +
+        '<span class="rphone' + (p.phone ? '' : ' none') + '">' + (p.phone ? esc(p.phone) : 'No phone number') + '</span></span>' + CHEVRON + '</button>';
+    }).join('');
+    if (b.total > list.length) html += '<p class="rmore">Showing ' + list.length + ' of ' + b.total + '. Type more to narrow it down.</p>';
+    showResults(html);
+    // Enter on a search that has exactly one answer goes straight to that student
+    if (search.openIfOne && list.length === 1) {
+      search.openIfOne = false;
+      openStudent(list[0].pid, list[0].name, 'search', list[0].phone);
+    }
+  }
+
+  $('q').addEventListener('input', function () {
+    search.openIfOne = false;
+    $('qClear').hidden = !this.value;
+    clearTimeout(search.timer);
+    if (!this.value.trim()) { search.id++; showResults(''); return; }
+    search.timer = setTimeout(runSearch, SEARCH_DELAY);
+  });
+  $('q').addEventListener('focus', function () {
+    if (this.value.trim() && $('results').innerHTML) { $('results').hidden = false; fitResults(); }
+  });
+  $('q').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      search.openIfOne = true;
+      runSearch();
+      this.blur(); // hides the phone keyboard so the list is fully visible
+    } else if (e.key === 'Escape') {
+      if (!$('results').hidden) closeResults(); else if (this.value) resetSearch();
+    } else if (e.key === 'ArrowDown') {
+      var first = $('results').querySelector('.rrow');
+      if (first) { e.preventDefault(); first.focus(); }
+    }
+  });
+  $('qClear').addEventListener('click', function () { resetSearch(); $('q').focus(); });
+
+  $('results').addEventListener('click', function (e) {
+    var row = e.target.closest ? e.target.closest('.rrow') : null;
+    if (row) openStudent(row.getAttribute('data-pid'), row.getAttribute('data-name'), 'search', row.getAttribute('data-phone'));
+  });
+  $('results').addEventListener('keydown', function (e) {
+    var rows = [].slice.call($('results').querySelectorAll('.rrow'));
+    var i = rows.indexOf(document.activeElement);
+    if (i < 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (rows[i + 1]) rows[i + 1].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (i > 0) rows[i - 1].focus(); else $('q').focus(); }
+    else if (e.key === 'Escape') { closeResults(); $('q').focus(); }
+  });
+  // tapping anywhere else (but not inside the student popup) puts the list away; the typed text stays
+  document.addEventListener('click', function (e) {
+    if (!$('results').hidden && e.target.closest && !e.target.closest('#searchRow, #sheet')) closeResults();
+  });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitResults);
+
   /* ---------- Events ---------- */
   $('content').addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('[data-act]') : null;
@@ -506,7 +649,7 @@
     var info = t.closest('.info');
     if (info) {
       state.studentsScroll = $('sheetPanel').scrollTop;
-      openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'));
+      openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'), 'class');
     }
   });
 

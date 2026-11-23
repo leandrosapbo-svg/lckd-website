@@ -3,12 +3,14 @@
 //
 // POST /api/admin/ingest   Authorization: Bearer <INGEST_TOKEN>
 // body: { days?: [ { date: 'YYYY-MM-DD', classes: [ ... ] } ],          the day snapshots (see _lib/data.js)
-//         histories?: [ { pin, plan: [...], bookings: [...] } ] }       what each student's G8TS profile says
+//         histories?: [ { pin, plan: [...], bookings: [...] } ],         what each student's G8TS profile says
+//         directory?: { shard, people: [ { pin, name, phone } ] } }      one shard of the student search list
 //
 // Student PINs are turned into private ids (pid) here and thrown away; the PIN is never stored.
 
 import { json } from '../lib/auth.js';
 import { makePid } from '../lib/pid.js';
+import { SHARDS, forgetDirectory } from '../lib/directory.js';
 
 const ALLOWED_ORIGINS = ['https://lckd.g8ts.app']; // the admin site the old in-page collector ran on
 const KINDS = ['Mixed', 'Ladies only'];
@@ -87,6 +89,23 @@ function cleanHistory(h) {
   return { pin, plan, bookings };
 }
 
+// One shard of the search list. Only the name and phone are kept, next to the private id.
+function cleanDirectory(d) {
+  if (!d || typeof d !== 'object' || !Number.isInteger(d.shard) || d.shard < 0 || d.shard >= SHARDS) return null;
+  if (!Array.isArray(d.people) || d.people.length > 600) return null;
+  const people = [];
+  const seen = new Set();
+  for (const p of d.people) {
+    if (!p || typeof p !== 'object') continue;
+    const pin = cleanPin(p.pin);
+    const name = str(p.name, 80);
+    if (!pin || !name || seen.has(pin)) continue;
+    seen.add(pin);
+    people.push({ pin, name, phone: str(p.phone, 24).replace(/[^\d+()\s-]/g, '') });
+  }
+  return { shard: d.shard, people };
+}
+
 export async function onRequest({ request, env }) {
   const cors = corsHeaders(request);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -108,7 +127,8 @@ export async function onRequest({ request, env }) {
     return json({ error: 'Bad request.' }, 400, cors);
   }
   const days = body && body.days, histories = body && body.histories;
-  if (!body || (!Array.isArray(days) && !Array.isArray(histories))) return json({ error: 'Bad request.' }, 400, cors);
+  const directory = body && body.directory ? cleanDirectory(body.directory) : null;
+  if (!body || (!Array.isArray(days) && !Array.isArray(histories) && !directory)) return json({ error: 'Bad request.' }, 400, cors);
   if ((days && (days.length < 1 || days.length > 14)) || (histories && histories.length > 100)) return json({ error: 'Bad request.' }, 400, cors);
 
   const now = new Date().toISOString();
@@ -141,5 +161,15 @@ export async function onRequest({ request, env }) {
     savedHistories++;
   }
 
-  return json({ ok: true, saved, histories: savedHistories, updated: now }, 200, cors);
+  let savedPeople = 0;
+  if (directory) {
+    const list = [];
+    for (const p of directory.people) list.push({ p: await pidOf(p.pin), n: p.name, t: p.phone });
+    list.sort((a, b) => (a.n < b.n ? -1 : a.n > b.n ? 1 : 0));
+    await env.BOOKINGS.put('dir:' + directory.shard, JSON.stringify(list), { expirationTtl: KEEP_SECONDS });
+    forgetDirectory();
+    savedPeople = list.length;
+  }
+
+  return json({ ok: true, saved, histories: savedHistories, people: savedPeople, updated: now }, 200, cors);
 }

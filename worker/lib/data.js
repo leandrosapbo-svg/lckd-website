@@ -145,6 +145,17 @@ export function demoHistoryRows(pid, today) {
   return rows;
 }
 
+// Everyone in the demo (all the made-up names the sample classes use), with made-up phone numbers
+export function demoDirectory() {
+  const out = [];
+  [FIRST_F, FIRST_M].forEach((firsts) => firsts.forEach((f) => LAST.forEach((l) => {
+    const name = f + ' ' + l;
+    const rand = seeded('phone:' + name);
+    out.push({ pid: fakePid(name), name, phone: ['3', '5', '6', '7'][Math.floor(rand() * 4)] + String(Math.floor(rand() * 1e7)).padStart(7, '0') });
+  })));
+  return out;
+}
+
 export async function getBookings(date, env) {
   if (env.DEMO === '1') return sampleBookings(date);
   if (!env.BOOKINGS) throw new Error('Bookings storage is not set up.');
