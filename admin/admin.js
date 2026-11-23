@@ -431,7 +431,10 @@
     }
 
     if (!s.booked) {
-      html += '<p class="none">No classes found for this student yet.</p>';
+      // hasProfile = we did read their G8TS profile, and it really has no classes. Otherwise we simply have not read it yet.
+      html += h.hasProfile
+        ? '<p class="none">No classes booked yet.</p>'
+        : '<p class="none"><b>History not loaded yet.</b><br>This student\'s G8TS profile has not been read yet. It is collected in the background, newest sign-ups first. Check again in a few minutes.</p>';
     } else {
       html += '<div class="big"><b>' + s.attended + '</b><span>classes attended</span></div>' +
         '<div class="stats">' +
@@ -466,8 +469,6 @@
 
     if (h.limitedSince) {
       html += '<p class="note">Booked through the G8TS app, so there is no full profile. History only goes back to ' + esc(dayMonth(h.limitedSince)) + ', when we first saved it.</p>';
-    } else if (!h.hasProfile && !s.booked) {
-      html += '<p class="note">History appears after the next sync.</p>';
     }
     $('sheetBody').innerHTML = html;
   }
