@@ -304,6 +304,7 @@
     $('sheetTitle').textContent = c.time + ' · ' + c.kind;
     $('sheetSub').textContent = labelFor(d.date) + ' · ' + (left > 0 ? left + ' spots left' : 'Full');
     $('sheetKind').textContent = mode === 'students' ? 'Students' : 'Class details';
+    $('sheetClose').setAttribute('aria-label', 'Close');
 
     var html = '';
     if (mode === 'students') {
@@ -364,6 +365,7 @@
     var c = findClass(state.open.id);
     state.open = { id: state.open.id, mode: 'student', pid: pid, name: name };
     $('sheetKind').textContent = 'Student history';
+    $('sheetClose').setAttribute('aria-label', 'Back to students');
     $('sheetTitle').textContent = name;
     $('sheetSub').textContent = c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '';
     $('sheetBody').innerHTML = backButton() + '<div class="skel" style="height:120px"></div><div class="skel" style="height:200px"></div>';
@@ -483,7 +485,13 @@
   $('sheet').addEventListener('click', function (e) {
     var t = e.target.closest ? e.target : null;
     if (!t) return;
-    if (t.closest('[data-close]')) { closeSheet(); return; }
+    var closer = t.closest('[data-close]');
+    if (closer) {
+      // the X on a student's history goes back to the student list; tapping outside still closes everything
+      if (state.open && state.open.mode === 'student' && closer.classList.contains('icon')) backToStudents();
+      else closeSheet();
+      return;
+    }
     var back = t.closest('[data-back]');
     if (back) { backToStudents(); return; }
     var info = t.closest('.info');
@@ -495,7 +503,7 @@
 
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;
-    if (e.key === 'Escape') closeSheet();
+    if (e.key === 'Escape') { if (state.open && state.open.mode === 'student') backToStudents(); else closeSheet(); }
     if (e.key === 'Tab') {
       // keep keyboard focus inside the popup
       var f = [].slice.call($('sheetPanel').querySelectorAll('button')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
