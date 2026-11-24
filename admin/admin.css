@@ -9,6 +9,7 @@
   --men: #5aa9ff;
   --warn: #f5b84b;
   --bad: #ff7a70;
+  --party: #4fd8c8;
   --track: #2a2a2a;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -64,6 +65,10 @@ input[type=text], input[type=password] {
 .bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 0 16px; min-height: 48px; }
 .bar-actions { display: flex; align-items: center; }
 .bar .icon.spin svg { animation: spin 0.8s linear infinite; }
+/* The gift icon: only there when someone booked that day has a birthday or a special class number */
+.icon.party { position: relative; color: var(--party); }
+.icon.party:active { background: var(--panel-2); }
+.pbadge { position: absolute; top: 3px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--party); color: var(--black); font-size: 12px; font-weight: 800; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px #0a0a0a; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Student search */
@@ -242,6 +247,25 @@ input[type=text], input[type=password] {
 .stu.first, .hrow.first { background: rgba(245, 184, 75, 0.12); box-shadow: inset 3px 0 0 var(--warn); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; }
 .stu.first { margin: 3px 0; padding-right: 6px; }
 .hrow.first { margin: 3px 0; padding-right: 8px; }
+
+/* A birthday or a special class number (10th, 25th, 50th ...): tinted like the first class, in the gift icon's colour */
+.celcap { display: block; margin-top: 1px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--party); white-space: normal; }
+.firstcap + .celcap { margin-top: 2px; }
+.stu.cel { background: rgba(79, 216, 200, 0.11); box-shadow: inset 3px 0 0 var(--party); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; margin: 3px 0; padding-right: 6px; }
+.stu.cel.first { background: linear-gradient(90deg, rgba(79, 216, 200, 0.13), rgba(245, 184, 75, 0.12)); }
+
+/* The celebrations list (opened from the gift icon) */
+.crow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 2px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; }
+.crow:active, .crow:focus-visible { background: var(--panel-2); }
+.crow.plain { cursor: default; }
+.ctext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cname { font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cchip { font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 4px 10px; border-radius: 99px; color: var(--party); border: 1px solid var(--party); background: rgba(79, 216, 200, 0.1); }
+.cbook { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.cbook b { color: var(--cream); font-weight: 700; }
+.cbook em { font-style: normal; color: var(--party); font-weight: 700; }
+.cgo { flex: none; color: var(--dim); }
 
 /* Info button on a student + the history view */
 .info { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--cream); font: italic 700 17px Georgia, "Times New Roman", serif; display: grid; place-items: center; padding: 0; }

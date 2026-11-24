@@ -8,9 +8,11 @@
 // getBookings(date) returns:
 //   { date, source, updated, capacity, zones: [{ key, name, capacity }],
 //     classes: [ { id, time, kind: 'Mixed' | 'Ladies only', name,
-//                  students: [ { name, zone: 'S'|'C'|'H', spot, type, gender: 'F'|'M'|'', status } ] } ] }
+//                  students: [ { name, zone: 'S'|'C'|'H', spot, type, gender: 'F'|'M'|'', status,
+//                                first?: true, bd?: true, cn?: 25 } ] } ] }
 //   type   = trial | walkin | membership | pack | g8ts
 //   status = enrolled | completed | noshow   (cancelled bookings are left out)
+//   first  = their very first class ever;  bd = their birthday is on this day;  cn = this booking is their 10th / 25th / 50th ... class
 
 const CAPACITY = 50;
 const ZONES = [
@@ -206,6 +208,10 @@ async function sampleBookings(date) {
       if (type === 'g8ts' && rand() < 0.2) gender = ''; // app bookings often have no gender on file
       const first = gender === 'M' ? FIRST_M : FIRST_F;
       const fullName = first[Math.floor(rand() * first.length)] + ' ' + LAST[Math.floor(rand() * LAST.length)];
+      // a few made-up celebrations (own random stream, so the rest of the sample classes stay as they were)
+      const spr = seeded('celebrate:' + date + s.time + s.kind + fullName);
+      const bd = spr() < 0.05 ? true : undefined;
+      const cn = spr() < 0.06 ? [10, 25, 50, 75, 100][Math.floor(spr() * 5)] : undefined;
       students.push({
         name: fullName,
         pid: fakePid(fullName),
@@ -215,6 +221,8 @@ async function sampleBookings(date) {
         gender,
         status: isPast ? (rand() < 0.07 ? 'noshow' : 'completed') : 'enrolled',
         first: type === 'trial' && rand() < 0.5 ? true : undefined,
+        bd,
+        cn,
       });
     }
     students.sort((a, b) => ZONES.findIndex((z) => z.key === a.zone) - ZONES.findIndex((z) => z.key === b.zone) || a.spot - b.spot);

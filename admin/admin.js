@@ -191,10 +191,12 @@
   }
 
   function renderSkeleton() {
+    setSpecial(0);
     $('content').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   }
 
   function renderError(msg) {
+    setSpecial(0);
     $('content').innerHTML = '<div class="errbox">' + esc(msg) + '<br><button type="button" id="retry">Try again</button></div>';
     $('retry').addEventListener('click', function () { load(false); });
   }
@@ -206,6 +208,7 @@
   function render() {
     var d = state.data;
     if (!d || d.date !== state.date) return;
+    setSpecial(celebrants(d).length); // the gift icon shows up when someone booked this day is celebrating
     $('sampleBanner').hidden = d.source !== 'sample';
     var cap = d.capacity, zones = d.zones;
     var classes = d.classes;
@@ -289,11 +292,15 @@
       }
     }
 
-    // (a student opened from the search box does not belong to any class, so it is left alone)
-    if (state.open && !(state.open.mode === 'student' && state.open.from === 'search')) {
-      var open = findClass(state.open.id);
-      if (!open) closeSheet();
-      else if (state.open.mode !== 'student') fillSheet(open, state.open.mode); // a student's history view is left alone
+    // (a student opened from the search box or the celebrations list does not belong to a class, so it is left alone)
+    if (state.open) {
+      var from = state.open.from;
+      if (state.open.mode === 'special') fillSpecial(); // the celebrations list follows the fresh numbers
+      else if (!(state.open.mode === 'student' && (from === 'search' || from === 'special'))) {
+        var open = findClass(state.open.id);
+        if (!open) closeSheet();
+        else if (state.open.mode !== 'student') fillSheet(open, state.open.mode); // a student's history view is left alone
+      }
     }
   }
 
@@ -348,11 +355,92 @@
     return key;
   }
 
+  /* ---------- Celebrations: birthdays and special class numbers ---------- */
+  // The sync marks a student with bd (their birthday is on this day) and cn (this booking is their 10th / 25th / 50th ... class).
+  function ordinal(n) {
+    var v = n % 100;
+    var suffix = (v >= 11 && v <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    return n + suffix;
+  }
+  function celebrations(p) {
+    var out = [];
+    if (p.bd) out.push({ kind: 'bd', icon: '🎂', text: 'Birthday' });
+    if (p.cn) out.push({ kind: 'cn', icon: '🏅', text: ordinal(p.cn) + ' class' });
+    return out;
+  }
+  function celText(cel) { return cel.map(function (c) { return c.icon + ' ' + c.text; }).join(' · '); }
+
+  // Everyone celebrating on this day, once each, in the order of their first class: [{ name, pid, cel: [...], rows: [{ c, p }] }]
+  function celebrants(d) {
+    var by = {}, list = [];
+    ((d && d.classes) || []).forEach(function (c) {
+      (c.students || []).forEach(function (p) {
+        var cel = celebrations(p);
+        if (!cel.length) return;
+        var key = p.pid || ('n:' + p.name);
+        var g = by[key];
+        if (!g) { g = by[key] = { name: p.name, pid: p.pid || '', cel: [], rows: [] }; list.push(g); }
+        cel.forEach(function (x) { if (!g.cel.some(function (y) { return y.text === x.text; })) g.cel.push(x); });
+        g.rows.push({ c: c, p: p });
+      });
+    });
+    return list;
+  }
+
+  function setSpecial(n) {
+    $('special').hidden = !n;
+    $('specialN').textContent = n ? String(n) : '';
+    $('special').setAttribute('aria-label', n ? 'Celebrations: ' + n + (n === 1 ? ' student' : ' students') : 'Celebrations');
+  }
+
+  function bookingLine(r) {
+    var p = r.p, c = r.c;
+    var where = p.zone ? (ZONE_NAME[p.zone] || p.zone) + (p.spot ? ' ' + p.spot : '') : '';
+    var parts = ['<b>' + esc(c.time) + '</b>'];
+    if (c.kind === 'Ladies only') parts.push('Ladies only');
+    if (where) parts.push(esc(where));
+    if (p.status === 'completed') parts.push('Attended');
+    if (p.status === 'noshow') parts.push('No show');
+    return '<span class="cbook">' + parts.join(' · ') + '</span>';
+  }
+
+  // The list behind the gift icon: who is celebrating what, and which class they are booked into
+  function fillSpecial() {
+    var d = state.data;
+    var list = celebrants(d);
+    $('sheetKind').textContent = 'Celebrations';
+    $('sheetTitle').textContent = labelFor(d.date);
+    $('sheetSub').textContent = list.length ? list.length + (list.length === 1 ? ' student is' : ' students are') + ' celebrating' : 'No one is celebrating';
+    $('sheetClose').setAttribute('aria-label', 'Close');
+    if (!list.length) { $('sheetBody').innerHTML = '<p class="none">Nothing to celebrate on this day.</p>'; return; }
+    $('sheetBody').innerHTML = list.map(function (g) {
+      var inner = '<span class="ctext"><span class="cname">' + esc(g.name) + '</span>' +
+        '<span class="cchips">' + g.cel.map(function (x) { return '<span class="cchip">' + x.icon + ' ' + esc(x.text) + '</span>'; }).join('') + '</span>' +
+        g.rows.map(bookingLine).join('') + '</span>';
+      return g.pid
+        ? '<button type="button" class="crow" data-pid="' + esc(g.pid) + '" data-name="' + esc(g.name) + '" data-sub="' + esc(celText(g.cel)) + '">' + inner + CHEVRON.replace('class="rgo"', 'class="cgo"') + '</button>'
+        : '<div class="crow plain">' + inner + '</div>';
+    }).join('');
+  }
+
+  function openSpecial() {
+    if (!state.data || state.data.date !== state.date) return;
+    state.open = { id: null, mode: 'special' };
+    state.lastFocus = document.activeElement;
+    fillSpecial();
+    $('sheetPanel').scrollTop = 0;
+    $('sheet').hidden = false;
+    document.body.classList.add('locked');
+    $('sheet').querySelector('.sheet-head .icon').focus();
+  }
+
   function studentRow(p) {
     var g = p.gender === 'F' ? 'w' : p.gender === 'M' ? 'm' : 'u';
-    return '<div class="stu' + (p.first ? ' first' : '') + '"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
+    var cel = celebrations(p);
+    return '<div class="stu' + (p.first ? ' first' : '') + (cel.length ? ' cel' : '') + '"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
       '<span class="stu-name"><i class="dot ' + g + '"></i><span class="nm"><span class="nm-t">' + esc(p.name) + '</span>' +
-      (p.first ? '<small class="firstcap">First class ever</small>' : '') + '</span></span>' +
+      (p.first ? '<small class="firstcap">First class ever</small>' : '') +
+      (cel.length ? '<small class="celcap">' + esc(celText(cel)) + '</small>' : '') + '</span></span>' +
       (p.status === 'noshow' ? '<span class="ttag ns">No show</span>' : '') +
       '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span>' +
       (p.pid ? '<button type="button" class="info" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="History of ' + esc(p.name) + '">i</button>' : '') +
@@ -367,9 +455,10 @@
     return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   }
 
-  // from = 'class' (the "i" button in a class's student list) or 'search' (a result of the search box at the top)
-  function openStudent(pid, name, from, phone) {
-    var fromSearch = from === 'search';
+  // from = 'class' (the "i" button in a class's student list), 'search' (a result of the search box at the top)
+  // or 'special' (a row of the celebrations list); sub = the line under the name for the last two
+  function openStudent(pid, name, from, sub) {
+    var fromSearch = from === 'search', fromSpecial = from === 'special';
     var c = null;
     if (fromSearch) {
       if ($('sheet').hidden) {
@@ -378,15 +467,18 @@
         document.body.classList.add('locked');
       }
       state.open = { id: null, mode: 'student', pid: pid, name: name, from: 'search' };
+    } else if (fromSpecial) {
+      if (!state.open) return;
+      state.open = { id: null, mode: 'student', pid: pid, name: name, from: 'special' };
     } else {
       if (!state.open) return;
       c = findClass(state.open.id);
       state.open = { id: state.open.id, mode: 'student', pid: pid, name: name, from: 'class' };
     }
     $('sheetKind').textContent = 'Student history';
-    $('sheetClose').setAttribute('aria-label', fromSearch ? 'Close' : 'Back to students');
+    $('sheetClose').setAttribute('aria-label', fromSearch ? 'Close' : fromSpecial ? 'Back to celebrations' : 'Back to students');
     $('sheetTitle').textContent = name;
-    $('sheetSub').textContent = fromSearch ? (phone || 'No phone number saved') : (c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '');
+    $('sheetSub').textContent = fromSearch ? (sub || 'No phone number saved') : fromSpecial ? (sub || '') : (c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '');
     $('sheetBody').innerHTML = backButton() + '<div class="skel" style="height:120px"></div><div class="skel" style="height:200px"></div>';
     $('sheetPanel').scrollTop = 0;
     if (fromSearch) $('sheet').querySelector('.sheet-head .icon').focus();
@@ -405,13 +497,19 @@
   }
 
   function backButton() {
-    var s = state.open && state.open.from === 'search';
-    return '<button type="button" class="back" data-back>‹ ' + (s ? 'Back to search' : 'Back to students') + '</button>';
+    var from = state.open && state.open.from;
+    return '<button type="button" class="back" data-back>‹ ' + (from === 'search' ? 'Back to search' : from === 'special' ? 'Back to celebrations' : 'Back to students') + '</button>';
   }
 
   function backToStudents() {
     if (!state.open) return;
     if (state.open.from === 'search') { closeSheet(); return; } // the search results are still there underneath
+    if (state.open.from === 'special') {
+      state.open = { id: null, mode: 'special' };
+      fillSpecial();
+      $('sheetPanel').scrollTop = state.studentsScroll || 0;
+      return;
+    }
     var c = findClass(state.open.id);
     if (!c) { closeSheet(); return; }
     state.open = { id: state.open.id, mode: 'students' };
@@ -651,8 +749,15 @@
     if (info) {
       state.studentsScroll = $('sheetPanel').scrollTop;
       openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'), 'class');
+      return;
+    }
+    var crow = t.closest('.crow[data-pid]');
+    if (crow) {
+      state.studentsScroll = $('sheetPanel').scrollTop;
+      openStudent(crow.getAttribute('data-pid'), crow.getAttribute('data-name'), 'special', crow.getAttribute('data-sub'));
     }
   });
+  $('special').addEventListener('click', openSpecial);
 
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;

@@ -61,7 +61,9 @@ function cleanClass(c) {
     const gender = p.gender === 'F' || p.gender === 'M' ? p.gender : '';
     const name = str(p.name, 80);
     if (!name) continue;
-    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined });
+    // bd = it is their birthday that day; cn = the booking is their 10th / 25th / 50th ... class (the page shows both on the gift icon)
+    const cn = Number.isInteger(p.cn) && p.cn >= 1 && p.cn <= 9999 ? p.cn : undefined;
+    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined, bd: p.bd === true ? true : undefined, cn });
   }
   return { id: str(c.id, 40) || null, time, kind: c.kind, name: str(c.name, 120), students };
 }
