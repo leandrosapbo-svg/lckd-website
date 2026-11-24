@@ -31,6 +31,16 @@ export function phoneLabel(s) {
   return raw;
 }
 
+// The number as WhatsApp wants it for a chat link: digits only, with the country code, no + or 00.
+// A plain 8-digit number is a Qatar number; anything else is taken as saved (already with its country code).
+// '' when it cannot be a real number (too short or too long).
+export function whatsappNumber(s) {
+  let d = String(s == null ? '' : s).replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.length === 8) d = '974' + d;
+  return d.length >= 10 && d.length <= 15 ? d : '';
+}
+
 export function prepare(e) {
   const nn = foldName(e.name);
   const ph = phoneDigits(e.phone);

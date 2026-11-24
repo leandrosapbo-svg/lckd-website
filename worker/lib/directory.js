@@ -32,10 +32,9 @@ export async function loadDirectory(env) {
   return list;
 }
 
-// 'F', 'M' or '' (not on file) for one student, from the search list. Costs up to SHARDS reads when the list
-// is not in memory, so callers that are close to the 50-lookups-per-request limit must count them.
-export async function genderFromDirectory(env, pid) {
+// One student's entry from the search list ({ pid, name, phone, gender, ... }) or null. Costs up to SHARDS reads
+// when the list is not in memory, so callers that are close to the 50-lookups-per-request limit must count them.
+export async function directoryEntry(env, pid) {
   const list = await loadDirectory(env);
-  const e = list.find((x) => x.pid === pid);
-  return e ? e.gender : '';
+  return list.find((x) => x.pid === pid) || null;
 }

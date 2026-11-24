@@ -4,10 +4,11 @@
 import { readSession, json } from '../lib/auth.js';
 import { dohaToday, addDays, demoHistoryRows } from '../lib/data.js';
 import { normStatus, mergeRows, summarize } from '../lib/history.js';
-import { genderFromDirectory } from '../lib/directory.js';
+import { directoryEntry } from '../lib/directory.js';
+import { phoneLabel, whatsappNumber } from '../lib/search.js';
 
-// Lookups per request: 1 history + (LOOK_BACK + LOOK_AHEAD + 1) days = 39, plus 8 when the gender has to come from
-// the search list (only for someone not booked in that window). The free plan allows 50.
+// Lookups per request: 1 history + (LOOK_BACK + LOOK_AHEAD + 1) days = 39, plus 8 when the search list is not in
+// memory yet (phone and gender come from it). The free plan allows 50.
 const LOOK_BACK = 30;   // days of our own saved snapshots to search (keeps us inside the 50 lookups a request may make)
 const LOOK_AHEAD = 7;
 const RECENT = 15;
@@ -24,7 +25,6 @@ export async function onRequestGet({ request, env }) {
   if (env.DEMO === '1') {
     source = 'sample';
     profile = { plan: [{ kind: 'membership', name: 'LCKD FOUNDING 1 MONTH', until: addDays(today, 12) }], bookings: demoHistoryRows(pid, today) };
-    gender = await genderFromDirectory(env, pid);
   } else {
     if (!env.BOOKINGS) return json({ error: 'Bookings storage is not set up yet.' }, 503);
     profile = await env.BOOKINGS.get('hist:' + pid, 'json');
@@ -45,12 +45,13 @@ export async function onRequestGet({ request, env }) {
         if (s.gender === 'F' || s.gender === 'M') gender = s.gender; // days run oldest to newest, so the latest one wins
       }));
     });
-
-    // Not booked lately (found through the search box): the search list knows their gender too.
-    if (!gender) {
-      try { gender = await genderFromDirectory(env, pid); } catch (e) { gender = ''; }
-    }
   }
+
+  // The search list knows their phone number, and their gender when they were not booked lately (found through
+  // the search box). It is kept in memory for a minute, so this is usually free. Never fails the request.
+  let entry = null;
+  try { entry = await directoryEntry(env, pid); } catch (e) { entry = null; }
+  if (!gender && entry) gender = entry.gender || '';
 
   const rows = mergeRows(profile && profile.bookings, saved);
   const summary = summarize(rows, today);
@@ -60,6 +61,8 @@ export async function onRequestGet({ request, env }) {
     source,
     hasProfile: !!profile,
     gender, // 'F', 'M' or '' when G8TS has none on file
+    phone: entry ? phoneLabel(entry.phone) : '',   // as shown to the coach
+    wa: entry ? whatsappNumber(entry.phone) : '',  // for a WhatsApp chat link; '' = no usable number
     // for G8TS-app members there is no profile, so history only goes back as far as we saved it
     limitedSince: profile ? null : oldestSaved,
     plan: (profile && profile.plan) || [],

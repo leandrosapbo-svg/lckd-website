@@ -279,6 +279,12 @@ input[type=text], input[type=password] {
 .plan.gen.w { border-color: var(--women); color: var(--women); }
 .plan.gen.m { border-color: var(--men); color: var(--men); }
 .plan.gen.u { border-color: var(--line); color: var(--dim); }
+.wa { display: flex; align-items: center; gap: 12px; margin: 0 0 18px; min-height: 52px; padding: 8px 16px; border-radius: 14px; background: #25d366; color: #05240f; text-decoration: none; }
+.wa:active { filter: brightness(.92); }
+.wa svg { flex: none; width: 26px; height: 26px; fill: currentColor; }
+.wa-t { display: flex; flex-direction: column; min-width: 0; }
+.wa-t b { font-size: 16px; line-height: 1.2; }
+.wa-t small { font-size: 12px; font-weight: 600; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 22px; }
 .stat { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .stat span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
