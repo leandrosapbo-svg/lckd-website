@@ -26,8 +26,16 @@ export async function loadDirectory(env) {
   const list = [];
   parts.forEach((part) => {
     if (!Array.isArray(part)) return;
-    part.forEach((p) => { if (p && p.p && p.n) list.push(prepare({ pid: p.p, name: p.n, phone: p.t || '' })); });
+    part.forEach((p) => { if (p && p.p && p.n) list.push(prepare({ pid: p.p, name: p.n, phone: p.t || '', gender: p.g || '' })); });
   });
   cached = { at: Date.now(), list };
   return list;
+}
+
+// 'F', 'M' or '' (not on file) for one student, from the search list. Costs up to SHARDS reads when the list
+// is not in memory, so callers that are close to the 50-lookups-per-request limit must count them.
+export async function genderFromDirectory(env, pid) {
+  const list = await loadDirectory(env);
+  const e = list.find((x) => x.pid === pid);
+  return e ? e.gender : '';
 }

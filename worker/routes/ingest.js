@@ -4,7 +4,7 @@
 // POST /api/admin/ingest   Authorization: Bearer <INGEST_TOKEN>
 // body: { days?: [ { date: 'YYYY-MM-DD', classes: [ ... ] } ],          the day snapshots (see _lib/data.js)
 //         histories?: [ { pin, plan: [...], bookings: [...] } ],         what each student's G8TS profile says
-//         directory?: { shard, people: [ { pin, name, phone } ] } }      one shard of the student search list
+//         directory?: { shard, people: [ { pin, name, phone, gender? } ] } }      one shard of the student search list
 //
 // Student PINs are turned into private ids (pid) here and thrown away; the PIN is never stored.
 
@@ -91,7 +91,7 @@ function cleanHistory(h) {
   return { pin, plan, bookings };
 }
 
-// One shard of the search list. Only the name and phone are kept, next to the private id.
+// One shard of the search list. Only the name, phone and gender are kept, next to the private id.
 function cleanDirectory(d) {
   if (!d || typeof d !== 'object' || !Number.isInteger(d.shard) || d.shard < 0 || d.shard >= SHARDS) return null;
   if (!Array.isArray(d.people) || d.people.length > 600) return null;
@@ -103,7 +103,7 @@ function cleanDirectory(d) {
     const name = str(p.name, 80);
     if (!pin || !name || seen.has(pin)) continue;
     seen.add(pin);
-    people.push({ pin, name, phone: str(p.phone, 24).replace(/[^\d+()\s-]/g, '') });
+    people.push({ pin, name, phone: str(p.phone, 24).replace(/[^\d+()\s-]/g, ''), gender: p.gender === 'F' || p.gender === 'M' ? p.gender : '' });
   }
   return { shard: d.shard, people };
 }
@@ -182,7 +182,7 @@ export async function onRequest({ request, env }) {
   let savedPeople = 0;
   if (directory) {
     const list = [];
-    for (const p of directory.people) list.push({ p: await pidOf(p.pin), n: p.name, t: p.phone });
+    for (const p of directory.people) list.push({ p: await pidOf(p.pin), n: p.name, t: p.phone, g: p.gender || undefined });
     list.sort((a, b) => (a.n < b.n ? -1 : a.n > b.n ? 1 : 0));
     const text = JSON.stringify(list);
     if ((await env.BOOKINGS.get('dir:' + directory.shard, 'text')) !== text) {

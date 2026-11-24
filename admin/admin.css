@@ -275,6 +275,10 @@ input[type=text], input[type=password] {
 .plans { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
 .plan { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--cream); color: var(--cream); }
 .plan.pack { border-color: #b79cff; color: #b79cff; }
+.plan.gen { display: inline-flex; align-items: center; gap: 7px; }
+.plan.gen.w { border-color: var(--women); color: var(--women); }
+.plan.gen.m { border-color: var(--men); color: var(--men); }
+.plan.gen.u { border-color: var(--line); color: var(--dim); }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 22px; }
 .stat { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
 .stat span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }

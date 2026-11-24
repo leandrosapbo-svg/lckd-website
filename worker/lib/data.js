@@ -147,13 +147,13 @@ export function demoHistoryRows(pid, today) {
   return rows;
 }
 
-// Everyone in the demo (all the made-up names the sample classes use), with made-up phone numbers
+// Everyone in the demo (all the made-up names the sample classes use), with made-up phone numbers and gender
 export function demoDirectory() {
   const out = [];
-  [FIRST_F, FIRST_M].forEach((firsts) => firsts.forEach((f) => LAST.forEach((l) => {
+  [FIRST_F, FIRST_M].forEach((firsts, i) => firsts.forEach((f) => LAST.forEach((l) => {
     const name = f + ' ' + l;
     const rand = seeded('phone:' + name);
-    out.push({ pid: fakePid(name), name, phone: ['3', '5', '6', '7'][Math.floor(rand() * 4)] + String(Math.floor(rand() * 1e7)).padStart(7, '0') });
+    out.push({ pid: fakePid(name), name, phone: ['3', '5', '6', '7'][Math.floor(rand() * 4)] + String(Math.floor(rand() * 1e7)).padStart(7, '0'), gender: i === 0 ? 'F' : 'M' });
   })));
   return out;
 }

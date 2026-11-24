@@ -521,12 +521,13 @@
     var s = h.summary || {};
     var html = backButton();
 
-    // plan
-    if (h.plan && h.plan.length) {
-      html += '<div class="plans">' + h.plan.map(function (p) {
+    // gender first, then the plan(s)
+    var gk = h.gender === 'F' ? 'w' : h.gender === 'M' ? 'm' : 'u';
+    html += '<div class="plans"><span class="plan gen ' + gk + '"><i class="dot ' + gk + '"></i>' +
+      (h.gender === 'F' ? 'Female' : h.gender === 'M' ? 'Male' : 'Gender not on file') + '</span>' +
+      (h.plan || []).map(function (p) {
         return '<span class="plan ' + esc(p.kind) + '">' + esc(p.name) + (p.until ? ' · until ' + esc(dayMonth(p.until)) : '') + '</span>';
       }).join('') + '</div>';
-    }
 
     if (!s.booked) {
       // hasProfile = we did read their G8TS profile, and it really has no classes. Otherwise we simply have not read it yet.

@@ -1,6 +1,6 @@
 // Student search: by name or by phone number. Pure functions (no storage), so they are easy to test.
 //
-// A directory entry is { pid, name, phone }. prepare() adds the lowercase / digits-only forms used for matching.
+// A directory entry is { pid, name, phone, gender? }. prepare() adds the lowercase / digits-only forms used for matching.
 
 const MAX_RESULTS = 20;
 
@@ -34,7 +34,7 @@ export function phoneLabel(s) {
 export function prepare(e) {
   const nn = foldName(e.name);
   const ph = phoneDigits(e.phone);
-  return { pid: e.pid, name: e.name, phone: e.phone || '', nn, words: nn.split(' ').filter(Boolean), ph, full: ph.length === 8 ? '974' + ph : ph };
+  return { pid: e.pid, name: e.name, phone: e.phone || '', gender: e.gender === 'F' || e.gender === 'M' ? e.gender : '', nn, words: nn.split(' ').filter(Boolean), ph, full: ph.length === 8 ? '974' + ph : ph };
 }
 
 // What kind of search is this text?  'name' (has letters), 'phone' (3+ digits) or 'short' (not enough yet)
