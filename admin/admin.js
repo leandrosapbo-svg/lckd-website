@@ -226,13 +226,25 @@
       (u ? '<span class="chip u">Unknown <b>' + u + '</b></span>' : '') + '</span>';
   }
 
+  // "(47 bookings)" next to the title: all the bookings of the day on screen. null = nothing to show yet.
+  function setDayTotal(n, date) {
+    var el = $('dayTotal');
+    if (n == null) { el.hidden = true; el.textContent = ''; return; }
+    // the word "bookings" is dropped on very narrow phones (css), leaving "(47)"
+    el.innerHTML = '(' + Number(n) + '<span class="dt-w"> ' + (n === 1 ? 'booking' : 'bookings') + '</span>)';
+    el.title = Number(n) + (n === 1 ? ' booking' : ' bookings') + ' on ' + labelFor(date);
+    el.hidden = false;
+  }
+
   function renderSkeleton() {
     setSpecial(0);
+    setDayTotal(null);
     $('content').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   }
 
   function renderError(msg) {
     setSpecial(0);
+    setDayTotal(null);
     $('content').innerHTML = '<div class="errbox">' + esc(msg) + '<br><button type="button" id="retry">Try again</button></div>';
     $('retry').addEventListener('click', function () { load(false); });
   }
@@ -250,10 +262,12 @@
     var classes = d.classes;
 
     if (d.noData) {
+      setDayTotal(null);
       $('content').innerHTML = '<div class="empty">No bookings saved for this day yet.</div>';
       return;
     }
     if (!classes.length) {
+      setDayTotal(0, d.date);
       $('content').innerHTML = '<div class="empty">No classes on this day.</div>';
       return;
     }
@@ -267,6 +281,7 @@
         a.women += b.women; a.men += b.men; a.unk += b.unk;
       });
     });
+    setDayTotal(dayTotal, d.date);
 
     var isToday = d.date === dohaToday();
     var now = dohaMinutes();
