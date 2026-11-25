@@ -67,6 +67,9 @@ input[type=text], input[type=password] {
 .pwbox summary::after { content: " ▾"; }
 .pwbox[open] summary::after { content: " ▴"; }
 .pwbox .primary { margin-top: 18px; }
+.legal-links { margin: 22px 0 0; text-align: center; font-size: 13px; line-height: 1.7; color: var(--dim); }
+.legal-links a { color: var(--dim); text-underline-offset: 3px; }
+.legal-links a:hover { color: var(--cream); }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--cream); }
 .avatar svg { width: 18px; height: 18px; }
 .icon.acct:active .avatar { background: var(--line); }

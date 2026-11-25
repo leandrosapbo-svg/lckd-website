@@ -18,5 +18,11 @@
   // then paste its ID here).
   "kv_namespaces": [
     { "binding": "BOOKINGS", "id": "517dae76664c47ccbb23a22ee4239f29" }
+  ],
+
+  // The coaches list (and later the coach comments): Cloudflare > Storage & Databases > D1 > lckd-admin.
+  // The Worker creates its own tables the first time it runs (worker/lib/coaches.js).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "lckd-admin", "database_id": "0b2c353d-f4cf-411f-936b-e42d0764ce17" }
   ]
 }
