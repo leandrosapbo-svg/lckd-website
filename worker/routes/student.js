@@ -6,6 +6,8 @@ import { dohaToday, addDays, demoHistoryRows } from '../lib/data.js';
 import { normStatus, mergeRows, summarize } from '../lib/history.js';
 import { directoryEntry } from '../lib/directory.js';
 import { phoneLabel, whatsappNumber } from '../lib/search.js';
+import { hasDb } from '../lib/coaches.js';
+import { lastTalk } from '../lib/talks.js';
 
 // Lookups per request: 1 history + (LOOK_BACK + LOOK_AHEAD + 1) days = 39, plus 8 when the search list is not in
 // memory yet (phone and gender come from it). The free plan allows 50.
@@ -53,6 +55,10 @@ export async function onRequestGet({ request, env }) {
   try { entry = await directoryEntry(env, pid); } catch (e) { entry = null; }
   if (!gender && entry) gender = entry.gender || '';
 
+  // The last time a coach ticked them on the "Talk to these" card. Never fails the request.
+  let chat = null;
+  try { if (hasDb(env)) chat = await lastTalk(env, pid); } catch (e) { chat = null; }
+
   const rows = mergeRows(profile && profile.bookings, saved);
   const summary = summarize(rows, today);
   const oldestSaved = saved.map((r) => r.date).sort()[0] || null;
@@ -63,6 +69,7 @@ export async function onRequestGet({ request, env }) {
     gender, // 'F', 'M' or '' when G8TS has none on file
     phone: entry ? phoneLabel(entry.phone) : '',   // as shown to the coach
     wa: entry ? whatsappNumber(entry.phone) : '',  // for a WhatsApp chat link; '' = no usable number
+    lastChat: chat, // { by, day } of the last "talked to" tick, or null
     // for G8TS-app members there is no profile, so history only goes back as far as we saved it
     limitedSince: profile ? null : oldestSaved,
     plan: (profile && profile.plan) || [],

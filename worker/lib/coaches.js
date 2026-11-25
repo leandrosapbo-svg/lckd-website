@@ -39,6 +39,21 @@ const SCHEMA = [
     saved_at TEXT NOT NULL
   )`,
   'CREATE INDEX IF NOT EXISTS comment_history_by_comment ON comment_history (comment_id)',
+  // "Talked to": a coach ticks a student on the "Talk to these" card once they really had a chat (lib/talks.js).
+  // One live row per student per class day; undoing only fills undone_at, so nothing is ever removed.
+  `CREATE TABLE IF NOT EXISTS talks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pid TEXT NOT NULL,
+    day TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    by_email TEXT NOT NULL,
+    by_name TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    undone_at TEXT,
+    undone_by TEXT
+  )`,
+  'CREATE INDEX IF NOT EXISTS talks_by_day ON talks (day)',
+  'CREATE INDEX IF NOT EXISTS talks_by_pid ON talks (pid, day)',
 ];
 
 export function hasDb(env) {

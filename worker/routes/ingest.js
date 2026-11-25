@@ -63,7 +63,12 @@ function cleanClass(c) {
     if (!name) continue;
     // bd = it is their birthday that day; cn = the booking is their 10th / 25th / 50th ... class (the page shows both on the gift icon)
     const cn = Number.isInteger(p.cn) && p.cn >= 1 && p.cn <= 9999 ? p.cn : undefined;
-    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined, bd: p.bd === true ? true : undefined, cn });
+    // For the "Talk to these" card: te = the day their trial pack ends (they have no paid plan yet), nc = classes they
+    // had completed before this one (only sent with te), ab = days since their previous class when that is a long break
+    const te = isDate(p.te) && !Number.isNaN(Date.parse(p.te + 'T00:00:00Z')) ? String(p.te) : undefined;
+    const nc = te && Number.isInteger(p.nc) && p.nc >= 0 && p.nc <= 9999 ? p.nc : undefined;
+    const ab = Number.isInteger(p.ab) && p.ab >= 1 && p.ab <= 999 ? p.ab : undefined;
+    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined, bd: p.bd === true ? true : undefined, cn, te, nc, ab });
   }
   return { id: str(c.id, 40) || null, time, kind: c.kind, name: str(c.name, 120), students };
 }

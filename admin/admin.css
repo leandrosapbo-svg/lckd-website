@@ -351,6 +351,34 @@ input[type=text], input[type=password] {
 .stu.cel { background: rgba(79, 216, 200, 0.11); box-shadow: inset 3px 0 0 var(--party); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; margin: 3px 0; padding-right: 6px; }
 .stu.cel.first { background: linear-gradient(90deg, rgba(79, 216, 200, 0.13), rgba(245, 184, 75, 0.12)); }
 
+/* "Talk to these": the people a coach should speak to in this class, and about what (blue, so it is not mistaken for the amber first-class or teal celebration tints) */
+.talk { margin: 6px 0 4px; padding: 12px 12px 4px; border: 1px solid rgba(90, 169, 255, 0.5); border-radius: 14px; background: rgba(90, 169, 255, 0.07); }
+.talk-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 6px; }
+.sheet .talk-head h3 { margin: 0; color: var(--cream); }
+.talk-n { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tt-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(90, 169, 255, 0.22); }
+.tt-check { flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 2px solid var(--dim); background: none; color: transparent; display: grid; place-items: center; }
+.tt-check:active { background: var(--line); }
+.tt-check.on { background: #6ee7a0; border-color: #6ee7a0; color: var(--black); }
+.tt-check:disabled { cursor: default; opacity: 0.75; }
+.tt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 2px 0; border: 0; background: none; text-align: left; color: var(--cream); }
+.tt-name { display: flex; align-items: baseline; gap: 8px; font-size: 17px; font-weight: 700; }
+.tt-name small { font-size: 12px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tt-why { font-size: 14px; line-height: 1.35; color: var(--cream); overflow-wrap: anywhere; }
+.tt-also { font-size: 12px; line-height: 1.35; color: var(--dim); overflow-wrap: anywhere; }
+.tt-hint { font-size: 13px; font-weight: 600; color: var(--men); }
+.tt-by { font-size: 13px; font-weight: 600; color: #6ee7a0; }
+.tt-row.done .tt-name, .tt-row.done .tt-why, .tt-row.done .tt-also { opacity: 0.55; }
+.talk-more { margin: 2px 0 6px; padding-top: 8px; border-top: 1px solid rgba(90, 169, 255, 0.22); font-size: 13px; color: var(--dim); }
+.talk-msg { margin: 4px 0 8px; font-size: 13px; font-weight: 600; color: var(--bad); }
+/* the count on a class's Students button, and the trial / long-break captions in the student list */
+.tbadge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 8px; padding: 0 6px; border-radius: 99px; background: var(--men); color: var(--black); font-size: 12px; font-weight: 800; line-height: 1; vertical-align: 1px; font-variant-numeric: tabular-nums; }
+.tbadge[hidden] { display: none; }
+.tcap { display: block; margin-top: 1px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--men); white-space: normal; }
+.tcap.back { color: var(--dim); }
+.lastchat { margin: -6px 0 14px; font-size: 13px; color: var(--dim); }
+.lastchat b { color: var(--cream); font-weight: 600; }
+
 /* The celebrations list (opened from the gift icon) */
 .crow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 2px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; }
 .crow:active, .crow:focus-visible { background: var(--panel-2); }
@@ -384,6 +412,9 @@ input[type=text], input[type=password] {
 .hrow { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .hdate { flex: 1; min-width: 0; }
 .hdate b { display: block; font-size: 16px; }
+/* today's class in a student's recent classes: tinted like the first-class line, in cream so it is not mistaken for amber / teal / blue */
+.hrow.today { margin: 3px 0; padding-left: 10px; padding-right: 6px; border-bottom-color: transparent; border-radius: 10px; background: rgba(242, 237, 226, 0.1); box-shadow: inset 3px 0 0 var(--cream); }
+.todaytag { display: inline-block; margin-right: 8px; padding: 2px 7px; border-radius: 99px; background: var(--cream); color: var(--black); font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: 2px; }
 .hdate span { display: block; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
 .ttag.st-completed { color: #7ddc9a; border-color: #7ddc9a; }
 .ttag.st-noshow { color: var(--bad); border-color: var(--bad); }

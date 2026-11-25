@@ -213,6 +213,13 @@ async function sampleBookings(date) {
       const spr = seeded('celebrate:' + date + s.time + s.kind + fullName);
       const bd = spr() < 0.05 ? true : undefined;
       const cn = spr() < 0.06 ? [10, 25, 50, 75, 100][Math.floor(spr() * 5)] : undefined;
+      // ... and for the "Talk to these" card: a trial about to end (te, with nc classes done before) or someone back after a break (ab)
+      const sig = seeded('signals:' + date + s.time + s.kind + fullName);
+      const status = isPast ? (rand() < 0.07 ? 'noshow' : 'completed') : 'enrolled'; // (drawn in the same order as before: the sample classes stay as they were)
+      const first1 = type === 'trial' && rand() < 0.5 ? true : undefined;
+      const te =type === 'trial' && sig() < 0.55 ? addDays(date, Math.floor(sig() * 6)) : undefined;
+      const nc = te ? (first1 ? 0 : Math.floor(sig() * 3)) : undefined;
+      const ab = (type === 'membership' || type === 'pack') && sig() < 0.07 ? 10 + Math.floor(sig() * 35) : undefined;
       students.push({
         name: fullName,
         pid: fakePid(fullName),
@@ -220,10 +227,13 @@ async function sampleBookings(date) {
         spot,
         type,
         gender,
-        status: isPast ? (rand() < 0.07 ? 'noshow' : 'completed') : 'enrolled',
-        first: type === 'trial' && rand() < 0.5 ? true : undefined,
+        status,
+        first: first1,
         bd,
         cn,
+        te,
+        nc,
+        ab,
       });
     }
     students.sort((a, b) => ZONES.findIndex((z) => z.key === a.zone) - ZONES.findIndex((z) => z.key === b.zone) || a.spot - b.spot);

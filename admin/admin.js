@@ -349,7 +349,7 @@
         typeGrid(s.types) +
         '<div class="acts">' +
         '<button type="button" class="act" data-act="details" data-id="' + esc(c.id) + '">Class details</button>' +
-        '<button type="button" class="act" data-act="students" data-id="' + esc(c.id) + '">Students</button>' +
+        '<button type="button" class="act" data-act="students" data-id="' + esc(c.id) + '">Students' + talkBadge(c, st) + '</button>' +
         '</div></div>';
     });
 
@@ -396,6 +396,7 @@
     var html = '';
     if (mode === 'students') {
       html += '<div class="big"><b>' + total + '</b><span>students booked</span></div>';
+      html += talkCard(c); // who to speak to in this class (only when there is someone)
       d.zones.forEach(function (z) {
         var zs = s.zone[z.key];
         html += '<h3 class="zh"><span>' + esc(z.name) + '</span><span>' + zs.n + ' / ' + z.capacity + '</span></h3>';
@@ -509,13 +510,136 @@
     $('sheet').querySelector('.sheet-head .icon').focus();
   }
 
+  /* ---------- "Talk to these": who to speak to in a class, and about what ---------- */
+  // Built from what the sync learned about each booked student: a trial that is about to end (te, nc classes done before),
+  // a first class, a long break (ab), a milestone or birthday (cn / bd) and the coaches' own injury and follow-up notes.
+  // A coach ticks a student once they really had a chat; the tick is saved under their name (state.data.talks).
+  var TALK_MAX = 8;         // students on the card (the rest are still marked in the list below)
+  var TRIAL_SOON_DAYS = 7;  // a trial that ends within this many days of the class is worth a word
+  var TALK_RANK = { trial: 0, injury: 1, followup: 2, first: 3, back: 4, milestone: 5, birthday: 6 };
+  var CHECK_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  function dayDiff(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000); }
+  function weekdayDay(d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }); } // "Sun 29 Nov"
+
+  // The reasons to speak to this student, most important first: [{ key, text, hint }]
+  function talkReasons(p, date) {
+    var out = [], nt = noteInfo(p.pid);
+    if (p.te && p.te >= date && dayDiff(date, p.te) <= TRIAL_SOON_DAYS) {
+      out.push({ key: 'trial', text: 'Trial ends ' + (p.te === date ? 'today' : weekdayDay(p.te)) + (p.nc > 0 ? ' · class ' + (p.nc + 1) : ''), hint: 'Talk about a membership' });
+    }
+    if (nt && nt.ij) out.push({ key: 'injury', text: 'Injury note: ' + nt.ij, hint: 'Ask how it is' });
+    if (nt && nt.fu) out.push({ key: 'followup', text: 'Follow up: ' + nt.fu, hint: 'Check in on it' });
+    if (p.first) out.push({ key: 'first', text: 'First class ever', hint: 'Welcome them and ask their goal' });
+    if (p.ab) out.push({ key: 'back', text: 'Back after ' + p.ab + ' days', hint: 'Tell them it is good to see them' });
+    if (p.cn) out.push({ key: 'milestone', text: ordinal(p.cn) + ' class', hint: 'Celebrate it' });
+    if (p.bd) out.push({ key: 'birthday', text: 'Birthday', hint: 'Wish them a happy birthday' });
+    return out;
+  }
+
+  // Everyone in the class with a reason, most important first: [{ p, reasons }]
+  function talkList(c) {
+    if (!state.data || !c) return [];
+    var seen = {}, list = [];
+    (c.students || []).forEach(function (p) {
+      if (!p.pid || seen[p.pid] || p.status === 'noshow') return;
+      seen[p.pid] = true;
+      var reasons = talkReasons(p, state.data.date);
+      if (reasons.length) list.push({ p: p, reasons: reasons });
+    });
+    list.sort(function (a, b) { return TALK_RANK[a.reasons[0].key] - TALK_RANK[b.reasons[0].key] || String(a.p.name).localeCompare(String(b.p.name)); });
+    return list;
+  }
+
+  // the small count on a class's Students button: how many people there are still to talk to (not for classes that are over)
+  function talkBadge(c, st) {
+    if (st === 'done' || !state.data || state.data.date < dohaToday()) return '';
+    var n = talkPending(c);
+    return '<span class="tbadge"' + (n ? '' : ' hidden') + ' title="Students to talk to">' + n + '</span>';
+  }
+
+  function talksOfDay() { return (state.data && state.data.talks) || {}; }
+  function talkPending(c) { var t = talksOfDay(); return talkList(c).filter(function (x) { return !t[x.p.pid]; }).length; }
+  function iAmOwner() { return !!(state.me && state.me.role === 'owner'); }
+
+  function talkRow(x, tk) {
+    var p = x.p, main = x.reasons[0], also = x.reasons.slice(1, 3).map(function (r) { return r.text; });
+    var locked = !!tk && !tk.mine && !iAmOwner(); // somebody else ticked them: only they (or the owner) can undo it
+    var label = tk ? (tk.mine ? 'Talked to ' + p.name + ' (you). Tap to undo' : 'Talked to ' + p.name + ' (' + tk.by + ')') : 'Mark ' + p.name + ' as talked to';
+    return '<div class="tt-row' + (tk ? ' done' : '') + '">' +
+      '<button type="button" class="tt-check' + (tk ? ' on' : '') + '" data-talk="' + esc(p.pid) + '" data-reason="' + esc(main.key) + '" aria-pressed="' + (tk ? 'true' : 'false') + '" aria-label="' + esc(label) + '"' + (locked ? ' disabled' : '') + '>' + CHECK_SVG + '</button>' +
+      '<button type="button" class="tt-body" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="History of ' + esc(p.name) + '">' +
+      '<span class="tt-name">' + esc(p.name) + '<small>' + esc((p.zone || '') + (p.spot ? ' ' + p.spot : '')) + '</small></span>' +
+      '<span class="tt-why">' + esc(main.text) + '</span>' +
+      (also.length ? '<span class="tt-also">Also: ' + esc(also.join(' · ')) + '</span>' : '') +
+      (tk ? '<span class="tt-by">Talked to by ' + esc(tk.mine ? 'you' : firstNameOf(tk.by)) + '</span>' : '<span class="tt-hint">' + esc(main.hint) + '</span>') +
+      '</button></div>';
+  }
+
+  function talkCard(c) {
+    var all = talkList(c);
+    if (!all.length) return '';
+    var t = talksOfDay();
+    var done = all.filter(function (x) { return t[x.p.pid]; }).length;
+    var html = '<section class="talk" id="talkCard" aria-label="Talk to these students">' +
+      '<div class="talk-head"><h3>Talk to these</h3><span class="talk-n">' + done + ' of ' + all.length + ' done</span></div>';
+    all.slice(0, TALK_MAX).forEach(function (x) { html += talkRow(x, t[x.p.pid]); });
+    if (all.length > TALK_MAX) html += '<p class="talk-more">+ ' + (all.length - TALK_MAX) + ' more are marked in the list below</p>';
+    if (state.talkMsg) html += '<p class="talk-msg" role="alert">' + esc(state.talkMsg) + '</p>';
+    return html + '</section>';
+  }
+
+  // After a tick: redraw the card in the open sheet and the little count on each class's Students button
+  function refreshTalks() {
+    var o = state.open, c = o && o.mode === 'students' ? findClass(o.id) : null;
+    var card = $('sheetBody') && $('sheetBody').querySelector('#talkCard');
+    if (c && card) card.outerHTML = talkCard(c);
+    ((state.data && state.data.classes) || []).forEach(function (k) {
+      var btn = $('content').querySelector('.act[data-act="students"][data-id="' + String(k.id).replace(/"/g, '') + '"]');
+      var badge = btn && btn.querySelector('.tbadge');
+      if (badge) { var n = talkPending(k); badge.textContent = String(n); badge.hidden = !n; }
+    });
+  }
+
+  function toggleTalk(btn) {
+    var pid = btn.getAttribute('data-talk'), date = state.data && state.data.date;
+    if (!pid || !date || btn.disabled) return;
+    var talks = state.data.talks || (state.data.talks = {});
+    var was = talks[pid];
+    state.talkMsg = '';
+    // show it straight away; the answer from the Worker (the real list for the day) replaces it
+    if (was) delete talks[pid]; else talks[pid] = { by: (state.me && state.me.name) || 'You', mine: true };
+    refreshTalks();
+    api('/api/admin/talks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: was ? 'undo' : 'done', pid: pid, date: date, reason: btn.getAttribute('data-reason') || '' })
+    }).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (state.data && state.data.date === date && r.body && r.body.talks) state.data.talks = r.body.talks;
+      if (!r.ok && r.status !== 409) state.talkMsg = (r.body && r.body.error) || 'Could not save that.';
+      delete state.hist[pid]; // their page shows "Last chat"
+      refreshTalks();
+    }).catch(function () {
+      if (state.data && state.data.date === date) { if (was) state.data.talks[pid] = was; else delete state.data.talks[pid]; }
+      state.talkMsg = 'No connection. That was not saved.';
+      refreshTalks();
+    });
+  }
+
+  // trial / long-break captions under a name in the class list (the first class, birthdays, milestones and notes already show there)
+  function talkCaps(p) {
+    if (!state.data) return '';
+    return talkReasons(p, state.data.date).filter(function (r) { return r.key === 'trial' || r.key === 'back'; })
+      .map(function (r) { return '<small class="tcap ' + r.key + '">' + esc(r.text) + '</small>'; }).join('');
+  }
+
   function studentRow(p) {
     var g = p.gender === 'F' ? 'w' : p.gender === 'M' ? 'm' : 'u';
     var cel = celebrations(p);
     return '<div class="stu' + (p.first ? ' first' : '') + (cel.length ? ' cel' : '') + '"><span class="spot">' + esc(p.zone || '') + ' ' + esc(p.spot || '') + '</span>' +
       '<span class="stu-name"><i class="dot ' + g + '"></i><span class="nm"><span class="nm-t">' + esc(p.name) + '</span>' +
       (p.first ? '<small class="firstcap">First class ever</small>' : '') +
-      (cel.length ? '<small class="celcap">' + esc(celText(cel)) + '</small>' : '') + '</span></span>' +
+      (cel.length ? '<small class="celcap">' + esc(celText(cel)) + '</small>' : '') + talkCaps(p) + '</span></span>' +
       noteBadge(p) +
       (p.status === 'noshow' ? '<span class="ttag ns">No show</span>' : '') +
       '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span>' +
@@ -629,6 +753,10 @@
         return '<span class="plan ' + esc(p.kind) + '">' + esc(p.name) + (p.until ? ' · until ' + esc(dayMonth(p.until)) : '') + '</span>';
       }).join('') + '</div>';
     setSheetActions(whatsappButton(h));
+    // the last time a coach ticked them on the "Talk to these" card (nobody has spoken to them if there is none)
+    html += '<p class="lastchat' + (h.lastChat ? '' : ' none-yet') + '">' + (h.lastChat
+      ? 'Last chat: <b>' + esc(firstNameOf(h.lastChat.by)) + '</b>, ' + esc(dayMonth(h.lastChat.day))
+      : 'No chat recorded yet') + '</p>';
     html += '<section class="notes" id="notes" aria-live="polite"><div class="skel" style="height:72px"></div></section>';
 
     if (!s.booked) {
@@ -652,9 +780,11 @@
 
     if (h.recent && h.recent.length) {
       // (no "first class ever" highlight here: that only belongs in a class's student list)
+      var todayStr = dohaToday();
       html += '<h3>Recent classes</h3>' + h.recent.map(function (r) {
         var where = [r.zone ? r.zone + (r.spot ? ' ' + r.spot : '') : '', r.kind === 'Ladies only' ? 'Ladies only' : ''].filter(Boolean).join(' · ');
-        return '<div class="hrow"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span></div>' +
+        var isToday = r.date === todayStr; // today's class(es) are highlighted, so a coach finds them at a glance
+        return '<div class="hrow' + (isToday ? ' today' : '') + '"><div class="hdate"><b>' + (isToday ? '<i class="todaytag">Today</i>' : '') + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span></div>' +
           (r.type ? '<span class="ttag ' + esc(r.type) + '">' + esc(typeShort(r.type)) + '</span>' : '') +
           '<span class="ttag st-' + esc(r.status || 'booked') + '">' + esc(STATUS_LABEL[r.status] || 'Booked') + '</span></div>';
       }).join('');
@@ -1242,7 +1372,9 @@
       }
       return;
     }
-    var info = t.closest('.info, .nbadge');
+    var talkBtn = t.closest('[data-talk]');
+    if (talkBtn) { toggleTalk(talkBtn); return; }
+    var info = t.closest('.info, .nbadge, .tt-body');
     if (info) {
       state.studentsScroll = $('sheetPanel').scrollTop;
       openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'), 'class');

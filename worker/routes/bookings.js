@@ -2,9 +2,11 @@ import { readSession, json } from '../lib/auth.js';
 import { getBookings, dohaToday, addDays } from '../lib/data.js';
 import { hasDb } from '../lib/coaches.js';
 import { noteSummary } from '../lib/comments.js';
+import { talksForDay } from '../lib/talks.js';
 
 export async function onRequestGet({ request, env }) {
-  if (!(await readSession(request, env))) return json({ error: 'Please sign in.' }, 401);
+  const session = await readSession(request, env);
+  if (!session) return json({ error: 'Please sign in.' }, 401);
 
   const date = new URL(request.url).searchParams.get('date') || dohaToday();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date + 'T00:00:00Z'))) {
@@ -25,6 +27,11 @@ export async function onRequestGet({ request, env }) {
         const notes = await noteSummary(env, pids);
         if (Object.keys(notes).length) day.notes = notes;
       } catch (e) { /* no icons this time */ }
+      // Who has already been spoken to on this day (the ticks on the "Talk to these" card). Same rule: never hides the bookings.
+      try {
+        const talks = await talksForDay(env, date, session.email);
+        if (Object.keys(talks).length) day.talks = talks;
+      } catch (e) { /* no ticks this time */ }
     }
     return json(day);
   } catch (e) {

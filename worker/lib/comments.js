@@ -115,7 +115,16 @@ export async function editComment(env, { id, pid, category, body, byEmail }) {
   return !!(update && update.meta && update.meta.changes);
 }
 
-// For the little note icon in a class's student list: { [pid]: { n: how many notes, inj: has an injury/health note } }
+// One line of a note for the "Talk to these" card: whitespace squeezed, cut at HINT_LEN characters.
+const HINT_LEN = 110;
+export function hintOf(body) {
+  const t = String(body == null ? '' : body).replace(/\s+/g, ' ').trim();
+  return t.length > HINT_LEN ? t.slice(0, HINT_LEN - 1).trimEnd() + '…' : t;
+}
+
+// For the little note icon in a class's student list: { [pid]: { n: how many notes, inj: has an injury/health note,
+// ij?: the latest injury/health note as one line, fu?: the latest "Follow up" note as one line } }
+// (ij and fu feed the "Talk to these" card: "Injury note: sore left knee. Ask how it is".)
 // Only students who have notes appear. Uses the pid index, so it reads little however many notes exist overall.
 export async function noteSummary(env, pids) {
   const list = [...new Set((pids || []).filter(validPid))];
@@ -124,11 +133,29 @@ export async function noteSummary(env, pids) {
   await ensureSchema(env);
   for (let i = 0; i < list.length; i += CHUNK) {
     const part = list.slice(i, i + CHUNK);
+    const marks = part.map(() => '?').join(',');
     const { results } = await env.DB.prepare(
-      `SELECT pid, COUNT(*) AS n, MAX(CASE WHEN category = 'injury' THEN 1 ELSE 0 END) AS inj
-       FROM comments WHERE deleted_at IS NULL AND pid IN (${part.map(() => '?').join(',')}) GROUP BY pid`
+      `SELECT pid, COUNT(*) AS n, MAX(CASE WHEN category = 'injury' THEN 1 ELSE 0 END) AS inj, MAX(CASE WHEN category = 'followup' THEN 1 ELSE 0 END) AS fu
+       FROM comments WHERE deleted_at IS NULL AND pid IN (${marks}) GROUP BY pid`
     ).bind(...part).all();
-    (results || []).forEach((r) => { out[r.pid] = { n: r.n, inj: !!r.inj }; });
+    const wanted = [];
+    (results || []).forEach((r) => {
+      out[r.pid] = { n: r.n, inj: !!r.inj };
+      if (r.inj || r.fu) wanted.push(r.pid);
+    });
+    if (!wanted.length) continue;
+    // the newest injury and follow-up note of those students (newest first, so the first one seen per kind wins)
+    const { results: texts } = await env.DB.prepare(
+      `SELECT pid, category, body FROM comments
+       WHERE deleted_at IS NULL AND category IN ('injury', 'followup') AND pid IN (${wanted.map(() => '?').join(',')})
+       ORDER BY created_at DESC, id DESC`
+    ).bind(...wanted).all();
+    (texts || []).forEach((t) => {
+      const o = out[t.pid];
+      if (!o) return;
+      const key = t.category === 'injury' ? 'ij' : 'fu';
+      if (!o[key]) o[key] = hintOf(t.body);
+    });
   }
   return out;
 }

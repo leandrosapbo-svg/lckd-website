@@ -6,6 +6,7 @@
 //   GET  /api/admin/me         who is signed in
 //   GET/POST /api/admin/coaches   the coach list (owner only)
 //   GET/POST /api/admin/comments  coach notes about a student
+//   GET/POST /api/admin/talks     "talked to" ticks on the Talk to these card
 //   POST /api/admin/logout
 //   GET  /api/admin/bookings   ?date=YYYY-MM-DD  (needs the login cookie)
 //   GET  /api/admin/student    ?pid=...          one student's history (needs the login cookie)
@@ -22,6 +23,7 @@ import { onRequestGet as search } from './routes/search.js';
 import { onRequestOptions as authOptions, onRequestStart as googleStart, onRequestCallback as googleCallback } from './routes/google.js';
 import { onRequestMe as me, onRequestGet as coachesGet, onRequestPost as coachesPost } from './routes/coaches.js';
 import { onRequestGet as commentsGet, onRequestPost as commentsPost } from './routes/comments.js';
+import { onRequestGet as talksGet, onRequestPost as talksPost } from './routes/talks.js';
 import { wrongAddressRedirect } from './lib/origin.js';
 
 export default {
@@ -48,6 +50,7 @@ export default {
       if (pathname === '/api/admin/auth/google/callback') return request.method === 'GET' ? await googleCallback(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/me') return request.method === 'GET' ? await me(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/comments') return request.method === 'GET' ? await commentsGet(c) : request.method === 'POST' ? await commentsPost(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/talks') return request.method === 'GET' ? await talksGet(c) : request.method === 'POST' ? await talksPost(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/coaches') return request.method === 'GET' ? await coachesGet(c) : request.method === 'POST' ? await coachesPost(c) : json({ error: 'Method not allowed.' }, 405);
       return json({ error: 'Not found.' }, 404);
     } catch (e) {
