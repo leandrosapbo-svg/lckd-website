@@ -13,6 +13,7 @@
 
 import { json, hasSecret, isConfigured, passwordLoginOn, sessionCookie, b64uEncode, b64uDecode, safeEqual } from '../lib/auth.js';
 import { hasDb, getCoach, ensureOwner, touchCoach, normEmail } from '../lib/coaches.js';
+import { redirectUri, wrongAddressRedirect } from '../lib/origin.js';
 
 const enc = new TextEncoder();
 const STATE_COOKIE = 'lckd_oauth';
@@ -45,18 +46,20 @@ function random(bytes) {
   return b64uEncode(crypto.getRandomValues(new Uint8Array(bytes)));
 }
 
-const redirectUri = (request) => new URL(request.url).origin + '/api/admin/auth/google/callback';
 
 export function onRequestOptions({ env }) {
   return json({ google: googleReady(env), password: passwordLoginOn(env) && isConfigured(env) });
 }
 
 export async function onRequestStart({ request, env }) {
+  // opened through http:// or the workers.dev address: go to https://lckd.qa first (the only return address Google knows)
+  const wrong = wrongAddressRedirect(request, env);
+  if (wrong) return wrong;
   if (!googleReady(env)) return back('notsetup');
   const state = random(18), nonce = random(18);
   const url = new URL(authUrl(env));
   url.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
-  url.searchParams.set('redirect_uri', redirectUri(request));
+  url.searchParams.set('redirect_uri', redirectUri(env, request));
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('state', state);
@@ -106,7 +109,7 @@ export async function onRequestCallback({ request, env }, fetchImpl) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri(request), grant_type: 'authorization_code',
+        redirect_uri: redirectUri(env, request), grant_type: 'authorization_code',
       }).toString(),
     });
     if (!res.ok) return back('failed', [clear]);

@@ -22,10 +22,15 @@ import { onRequestGet as search } from './routes/search.js';
 import { onRequestOptions as authOptions, onRequestStart as googleStart, onRequestCallback as googleCallback } from './routes/google.js';
 import { onRequestMe as me, onRequestGet as coachesGet, onRequestPost as coachesPost } from './routes/coaches.js';
 import { onRequestGet as commentsGet, onRequestPost as commentsPost } from './routes/comments.js';
+import { wrongAddressRedirect } from './lib/origin.js';
 
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
+
+    // The admin has one address (https://lckd.qa/admin): anyone who arrives by http:// or the workers.dev address is sent there
+    const wrong = wrongAddressRedirect(request, env);
+    if (wrong) return wrong;
 
     // Anything that is not the admin API is the normal website: serve it untouched.
     if (!pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
