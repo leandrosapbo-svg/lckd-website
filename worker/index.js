@@ -1,7 +1,10 @@
 // The lckd.qa Worker. The website itself is static files (served straight from the assets);
 // this script only answers the admin API under /api/admin/*.
 //
-//   POST /api/admin/login      single-user sign in
+//   POST /api/admin/login      the shared password sign in
+//   GET  /api/admin/auth/options, /auth/google, /auth/google/callback   "Sign in with Google" (see routes/google.js)
+//   GET  /api/admin/me         who is signed in
+//   GET/POST /api/admin/coaches   the coach list (owner only)
 //   POST /api/admin/logout
 //   GET  /api/admin/bookings   ?date=YYYY-MM-DD  (needs the login cookie)
 //   GET  /api/admin/student    ?pid=...          one student's history (needs the login cookie)
@@ -15,6 +18,8 @@ import { onRequestGet as bookings } from './routes/bookings.js';
 import { onRequest as ingest } from './routes/ingest.js';
 import { onRequestGet as student } from './routes/student.js';
 import { onRequestGet as search } from './routes/search.js';
+import { onRequestOptions as authOptions, onRequestStart as googleStart, onRequestCallback as googleCallback } from './routes/google.js';
+import { onRequestMe as me, onRequestGet as coachesGet, onRequestPost as coachesPost } from './routes/coaches.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -31,6 +36,11 @@ export default {
       if (pathname === '/api/admin/bookings') return request.method === 'GET' ? await bookings(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/student') return request.method === 'GET' ? await student(c) : json({ error: 'Method not allowed.' }, 405);
       if (pathname === '/api/admin/search') return request.method === 'GET' ? await search(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/auth/options') return request.method === 'GET' ? authOptions(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/auth/google') return request.method === 'GET' ? await googleStart(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/auth/google/callback') return request.method === 'GET' ? await googleCallback(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/me') return request.method === 'GET' ? await me(c) : json({ error: 'Method not allowed.' }, 405);
+      if (pathname === '/api/admin/coaches') return request.method === 'GET' ? await coachesGet(c) : request.method === 'POST' ? await coachesPost(c) : json({ error: 'Method not allowed.' }, 405);
       return json({ error: 'Not found.' }, 404);
     } catch (e) {
       return json({ error: 'Something went wrong.' }, 500);

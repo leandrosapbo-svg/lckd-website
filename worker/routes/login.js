@@ -1,7 +1,8 @@
-import { isConfigured, checkLogin, sessionCookie, json, sameOrigin } from '../lib/auth.js';
+import { isConfigured, passwordLoginOn, checkLogin, sessionCookie, json, sameOrigin } from '../lib/auth.js';
 
 export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: 'Not allowed.' }, 403);
+  if (!passwordLoginOn(env)) return json({ error: 'The shared password is switched off. Sign in with Google.' }, 403);
   if (!isConfigured(env)) return json({ error: 'Admin login is not set up yet.' }, 503);
 
   let body;

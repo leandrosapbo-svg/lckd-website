@@ -17,7 +17,8 @@
   var HIST_CACHE_MS = 2 * 60 * 1000; // a student's history is reused for this long, then read again
   var SEARCH_DELAY = 220;            // wait for a pause in typing before searching
 
-  var state = { date: null, data: null, reqId: 0, open: null, lastFocus: null, loadedAt: 0, autoScroll: false, hist: {}, studentsScroll: 0 };
+  var state = { date: null, data: null, reqId: 0, open: null, lastFocus: null, loadedAt: 0, autoScroll: false, hist: {}, studentsScroll: 0, me: null, meLoading: false, auth: null, coaches: [] };
+  var pendingNotice = ''; // a message for the login screen (set when Google sends the coach back with a problem)
   var search = { id: 0, timer: 0, openIfOne: false, shown: 0 };
 
   function esc(s) {
@@ -78,12 +79,46 @@
     closeSheet();
     state.data = null;
     state.hist = {};
+    state.me = null;
     resetSearch();
     $('main').hidden = true;
     $('login').hidden = false;
     $('loginError').hidden = true;
-    setTimeout(function () { $('user').focus(); }, 50);
+    $('loginNotice').textContent = pendingNotice;
+    $('loginNotice').hidden = !pendingNotice;
+    pendingNotice = '';
+    applyLogin(state.auth);
+    loadAuth().then(function (a) {
+      applyLogin(a);
+      if (!a.google && a.password) setTimeout(function () { $('user').focus(); }, 50);
+    });
   }
+
+  // What the login screen offers: the Google button and/or the shared password (the Worker says which are set up)
+  function loadAuth() {
+    if (state.auth) return Promise.resolve(state.auth);
+    return api('/api/admin/auth/options').then(function (r) {
+      if (r.ok) { state.auth = r.body; return state.auth; }
+      return { google: false, password: true };
+    }).catch(function () { return { google: false, password: true }; });
+  }
+  function applyLogin(a) {
+    a = a || { google: false, password: true };
+    $('googleBtn').hidden = !a.google;
+    $('pwBox').hidden = !a.password;
+    $('pwBox').open = !a.google; // the password form is the only way in: show it
+    if (!a.google && !a.password) {
+      $('loginNotice').textContent = 'Sign-in is not set up yet.';
+      $('loginNotice').hidden = false;
+    }
+  }
+  var SIGNIN_MESSAGES = {
+    notallowed: 'That Google account is not on the coach list. Ask the owner to add your email.',
+    cancelled: 'Google sign-in was cancelled.',
+    expired: 'That sign-in took too long or was opened twice. Please try again.',
+    failed: 'Google sign-in did not work. Please try again.',
+    notsetup: 'Google sign-in is not set up yet.'
+  };
   function showMain() {
     $('login').hidden = true;
     $('main').hidden = false;
@@ -102,6 +137,7 @@
       if (r.status === 401) { showLogin(); return; }
       if (!r.ok) throw new Error(r.body.error || 'Could not load bookings.');
       showMain();
+      if (!state.me) loadMe();
       state.data = r.body;
       state.loadedAt = Date.now();
       render();
@@ -296,6 +332,7 @@
     if (state.open) {
       var from = state.open.from;
       if (state.open.mode === 'special') fillSpecial(); // the celebrations list follows the fresh numbers
+      else if (state.open.mode === 'account' || state.open.mode === 'coaches') { /* not about the classes: leave it alone */ }
       else if (!(state.open.mode === 'student' && (from === 'search' || from === 'special'))) {
         var open = findClass(state.open.id);
         if (!open) closeSheet();
@@ -659,6 +696,126 @@
     if (state.lastFocus && state.lastFocus.focus) { try { state.lastFocus.focus(); } catch (e) { /* ignore */ } }
   }
 
+  /* ---------- Who is signed in, and the coach list (owner only) ---------- */
+  var PERSON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
+
+  function initials(name, email) {
+    var w = String(name || '').trim().split(/\s+/).filter(Boolean);
+    var s = w.length > 1 ? w[0].charAt(0) + w[w.length - 1].charAt(0) : (w[0] || email || '?').slice(0, 2);
+    return s.toUpperCase();
+  }
+
+  function setAccountButton() {
+    var me = state.me, b = $('account');
+    if (me && me.kind === 'coach') {
+      b.innerHTML = '<span class="avatar">' + esc(initials(me.name, me.email)) + '</span>';
+      b.setAttribute('aria-label', 'Account: ' + (me.name || me.email));
+    } else {
+      b.innerHTML = '<span class="avatar">' + PERSON_SVG + '</span>';
+      b.setAttribute('aria-label', 'Account');
+    }
+  }
+
+  function loadMe() {
+    if (state.meLoading) return;
+    state.meLoading = true;
+    api('/api/admin/me').then(function (r) {
+      if (r.ok) { state.me = r.body; setAccountButton(); }
+    }).catch(function () { /* the button keeps its plain look */ }).then(function () { state.meLoading = false; });
+  }
+
+  function signOut() {
+    api('/api/admin/logout', { method: 'POST' }).then(showLogin, showLogin);
+  }
+
+  function openAccount() {
+    state.open = { id: null, mode: 'account' };
+    state.lastFocus = document.activeElement;
+    fillAccount();
+    $('sheetPanel').scrollTop = 0;
+    $('sheet').hidden = false;
+    document.body.classList.add('locked');
+    $('sheet').querySelector('.sheet-head .icon').focus();
+    if (!state.auth) loadAuth().then(function () { if (state.open && state.open.mode === 'account') fillAccount(); });
+  }
+
+  function fillAccount() {
+    var me = state.me || { kind: 'shared' };
+    var coach = me.kind === 'coach';
+    $('sheetKind').textContent = 'Account';
+    $('sheetTitle').textContent = coach ? (me.name || me.email) : 'Shared login';
+    $('sheetSub').textContent = coach ? me.email : 'Signed in with the shared password';
+    $('sheetClose').setAttribute('aria-label', 'Close');
+    var html = '';
+    if (coach) {
+      html += '<div class="plans"><span class="plan">' + (me.role === 'owner' ? 'Owner' : 'Coach') + '</span></div>';
+      if (me.role === 'owner') html += '<button type="button" class="sbtn" data-coaches>Manage coaches</button>';
+    } else {
+      html += '<p class="note">You are signed in with the shared password, so nothing you do can be tied to a person.' +
+        (state.auth && state.auth.google ? ' Sign in with Google to put your own name on what you do.' : '') + '</p>';
+      if (state.auth && state.auth.google) html += '<a class="sbtn solid" href="/api/admin/auth/google">Sign in with Google</a>';
+    }
+    html += '<button type="button" class="sbtn" data-signout>Sign out</button>';
+    $('sheetBody').innerHTML = html;
+  }
+
+  function openCoaches() {
+    state.open = { id: null, mode: 'coaches' };
+    fillCoaches();
+    $('sheetPanel').scrollTop = 0;
+    api('/api/admin/coaches').then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!state.open || state.open.mode !== 'coaches') return;
+      if (!r.ok) { $('sheetBody').innerHTML = coachesBack() + '<p class="none">' + esc(r.body.error || 'Could not load the coaches.') + '</p>'; return; }
+      state.coaches = r.body.coaches || [];
+      fillCoaches();
+    }).catch(function () {
+      if (state.open && state.open.mode === 'coaches') $('sheetBody').innerHTML = coachesBack() + '<p class="none">No connection.</p>';
+    });
+  }
+
+  function coachesBack() { return '<button type="button" class="back" data-acct-back>‹ Back to account</button>'; }
+
+  // msg = { text, bad } shown under the form after an add / remove
+  function fillCoaches(msg) {
+    var list = state.coaches || [], me = state.me || {};
+    $('sheetKind').textContent = 'Account';
+    $('sheetTitle').textContent = 'Coaches';
+    $('sheetSub').textContent = list.length ? list.length + (list.length === 1 ? ' person can' : ' people can') + ' sign in' : 'Loading…';
+    $('sheetClose').setAttribute('aria-label', 'Close');
+    var html = coachesBack() + '<div class="coaches">' + list.map(function (c) {
+      var self = c.email === me.email;
+      return '<div class="coach"><span class="ctxt"><b>' + esc(c.name || c.email) + (self ? ' (you)' : '') + '</b>' +
+        '<small>' + (c.name ? esc(c.email) : 'has not signed in yet') + '</small></span>' +
+        (c.role === 'owner' ? '<span class="plan">Owner</span>'
+          : '<button type="button" class="coach-x" data-remove="' + esc(c.email) + '" data-name="' + esc(c.name || c.email) + '">Remove</button>') +
+        '</div>';
+    }).join('') + '</div>' +
+      '<form id="coachForm" class="addcoach" autocomplete="off"><h3>Add a coach</h3>' +
+      '<p class="note">Type the email of their Google account. They can sign in as soon as you add them.</p>' +
+      '<input id="coachEmail" type="text" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Their Google email" maxlength="254" aria-label="Google email of the new coach" required>' +
+      '<input id="coachName" type="text" placeholder="Name (optional)" maxlength="80" aria-label="Name of the new coach">' +
+      '<button type="submit" class="primary" id="coachAdd">Add coach</button></form>' +
+      (msg ? '<p class="' + (msg.bad ? 'error' : 'okmsg') + '" role="status">' + esc(msg.text) + '</p>' : '');
+    $('sheetBody').innerHTML = html;
+  }
+
+  function changeCoach(body, okText) {
+    return api('/api/admin/coaches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!state.open || state.open.mode !== 'coaches') return;
+      if (!r.ok) {
+        fillCoaches({ text: r.body.error || 'That did not work.', bad: true });
+        if (body.action === 'add') { $('coachEmail').value = body.email || ''; $('coachName').value = body.name || ''; } // keep what was typed
+        return;
+      }
+      state.coaches = r.body.coaches || [];
+      fillCoaches({ text: okText });
+    }).catch(function () {
+      if (state.open && state.open.mode === 'coaches') fillCoaches({ text: 'No connection. Try again.', bad: true });
+    });
+  }
+
   /* ---------- Student search (name or phone number) ---------- */
   var CHEVRON = '<svg class="rgo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 
@@ -798,6 +955,17 @@
     }
     var back = t.closest('[data-back]');
     if (back) { backToStudents(); return; }
+    if (t.closest('[data-signout]')) { signOut(); return; }
+    if (t.closest('[data-coaches]')) { openCoaches(); return; }
+    if (t.closest('[data-acct-back]')) { state.open = { id: null, mode: 'account' }; fillAccount(); return; }
+    var rm = t.closest('[data-remove]');
+    if (rm) {
+      var who = rm.getAttribute('data-name');
+      if (window.confirm('Remove ' + who + ' from the coach list? They are signed out right away and cannot sign in again until you add them back.')) {
+        changeCoach({ action: 'remove', email: rm.getAttribute('data-remove') }, who + ' was removed.');
+      }
+      return;
+    }
     var info = t.closest('.info');
     if (info) {
       state.studentsScroll = $('sheetPanel').scrollTop;
@@ -811,13 +979,21 @@
     }
   });
   $('special').addEventListener('click', openSpecial);
+  $('account').addEventListener('click', openAccount);
+  $('sheet').addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'coachForm') return;
+    e.preventDefault();
+    var email = $('coachEmail').value.trim(), name = $('coachName').value.trim();
+    $('coachAdd').disabled = true;
+    changeCoach({ action: 'add', email: email, name: name }, email + ' can sign in with Google now.');
+  });
 
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;
     if (e.key === 'Escape') { if (state.open && state.open.mode === 'student') backToStudents(); else closeSheet(); }
     if (e.key === 'Tab') {
       // keep keyboard focus inside the popup
-      var f = [].slice.call($('sheetPanel').querySelectorAll('button')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
+      var f = [].slice.call($('sheetPanel').querySelectorAll('button, input, a[href]')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
       if (!f.length) return;
       var i = f.indexOf(document.activeElement);
       e.preventDefault();
@@ -840,10 +1016,6 @@
   });
   $('dayTag').addEventListener('click', function () { setDate(dohaToday()); });
   $('refresh').addEventListener('click', function () { load(true); });
-
-  $('logout').addEventListener('click', function () {
-    api('/api/admin/logout', { method: 'POST' }).then(showLogin, showLogin);
-  });
 
   // Swipe left / right on the list to change day
   (function () {
@@ -913,6 +1085,12 @@
   });
 
   /* ---------- Start ---------- */
+  // Google sends the coach back to /admin/?signin=<code> when something went wrong; show it on the login screen
+  var signinCode = new URLSearchParams(location.search).get('signin');
+  if (signinCode) {
+    pendingNotice = SIGNIN_MESSAGES[signinCode] || 'Could not sign in.';
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* ignore */ }
+  }
   var h = location.hash.replace('#', '');
   setDate(validDate(h) ? h : dohaToday(), true);
   load(false);

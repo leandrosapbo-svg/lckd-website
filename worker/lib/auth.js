@@ -1,24 +1,28 @@
-// Single-user login for the LCKD admin page (Cloudflare Pages Functions).
+// Login for the LCKD admin page. Two ways in, both end in the same signed cookie:
+//   1. "Sign in with Google" (routes/google.js): each coach has their own identity, listed in the D1 table `coaches`
+//   2. the shared username + password (the original login; can be switched off with PASSWORD_LOGIN=off)
 //
-// Secrets (set in Cloudflare > Pages project > Settings > Variables and Secrets,
-// or in .dev.vars for local runs):
-//   ADMIN_USER           the one allowed username
+// Secrets / variables (Cloudflare > Worker > Settings > Variables and Secrets, or .dev.vars for local runs):
+//   ADMIN_USER           the shared username
 //   ADMIN_PASSWORD_HASH  pbkdf2$<iterations>$<salt>$<hash>  (made by make-password-hash.mjs)
 //   SESSION_SECRET       32+ random characters, signs the login cookie
-// Changing SESSION_SECRET signs everybody out.
+//   PASSWORD_LOGIN       "off" = only Google sign-in works
+// Changing SESSION_SECRET signs everybody out (and would change every student's private id: never rotate it casually).
+
+import { getCoach } from './coaches.js';
 
 const enc = new TextEncoder();
 const COOKIE = 'lckd_admin';
 const SESSION_SECONDS = 14 * 24 * 3600; // stay signed in for 14 days
 
-function b64uEncode(buf) {
+export function b64uEncode(buf) {
   const bytes = new Uint8Array(buf);
   let s = '';
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function b64uDecode(str) {
+export function b64uDecode(str) {
   str = String(str).replace(/-/g, '+').replace(/_/g, '/');
   while (str.length % 4) str += '=';
   const bin = atob(str);
@@ -27,7 +31,7 @@ function b64uDecode(str) {
   return out;
 }
 
-function safeEqual(a, b) {
+export function safeEqual(a, b) {
   if (a.length !== b.length) return false;
   let d = 0;
   for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
@@ -42,8 +46,18 @@ function hmacKey(secret, usages) {
   return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, usages);
 }
 
+export function hasSecret(env) {
+  return !!(env.SESSION_SECRET && String(env.SESSION_SECRET).length >= 32);
+}
+
+// the shared username + password is set up
 export function isConfigured(env) {
-  return !!(env.ADMIN_USER && env.ADMIN_PASSWORD_HASH && env.SESSION_SECRET && String(env.SESSION_SECRET).length >= 32);
+  return !!(env.ADMIN_USER && env.ADMIN_PASSWORD_HASH && hasSecret(env));
+}
+
+// the shared password may be used (PASSWORD_LOGIN=off turns it off once every coach has a Google sign-in)
+export function passwordLoginOn(env) {
+  return String(env.PASSWORD_LOGIN || '').trim().toLowerCase() !== 'off';
 }
 
 export function json(body, status = 200, headers = {}) {
@@ -76,9 +90,13 @@ export async function checkLogin(env, username, password) {
   return passOk && userOk;
 }
 
-export async function sessionCookie(request, env) {
+// identity = { email, name } for a coach who signed in with Google; none = the shared password
+export async function sessionCookie(request, env, identity) {
   const now = Math.floor(Date.now() / 1000);
-  const payload = b64uEncode(enc.encode(JSON.stringify({ u: String(env.ADMIN_USER), iat: now, exp: now + SESSION_SECONDS })));
+  const body = identity
+    ? { e: identity.email, n: String(identity.name || '').slice(0, 80), iat: now, exp: now + SESSION_SECONDS }
+    : { u: String(env.ADMIN_USER), iat: now, exp: now + SESSION_SECONDS };
+  const payload = b64uEncode(enc.encode(JSON.stringify(body)));
   const sig = b64uEncode(await crypto.subtle.sign('HMAC', await hmacKey(env.SESSION_SECRET, ['sign']), enc.encode(payload)));
   return cookieString(request, payload + '.' + sig, SESSION_SECONDS);
 }
@@ -93,8 +111,11 @@ function cookieString(request, value, maxAge) {
   return `${COOKIE}=${value}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
 }
 
+// -> { kind: 'coach', email, name, role: 'owner'|'coach' }   a coach signed in with Google (still on the list)
+//    { kind: 'shared' }                                         the shared password
+//    null                                                       not signed in
 export async function readSession(request, env) {
-  if (!isConfigured(env)) return null;
+  if (!hasSecret(env)) return null;
   const m = (request.headers.get('Cookie') || '').match(/(?:^|;\s*)lckd_admin=([^;]+)/);
   if (!m) return null;
   const [payload, sig] = m[1].split('.');
@@ -104,8 +125,15 @@ export async function readSession(request, env) {
     if (!ok) return null;
     const data = JSON.parse(new TextDecoder().decode(b64uDecode(payload)));
     if (!data.exp || data.exp < Math.floor(Date.now() / 1000)) return null;
+    if (data.e) {
+      // a Google sign-in: only valid while the coach is still on the list (taking someone off locks them out within seconds)
+      const coach = await getCoach(env, data.e);
+      if (!coach || !coach.active) return null;
+      return { kind: 'coach', email: coach.email, name: coach.name || data.n || coach.email, role: coach.role };
+    }
+    if (!passwordLoginOn(env) || !isConfigured(env)) return null;
     if (String(data.u).toLowerCase() !== String(env.ADMIN_USER).toLowerCase()) return null;
-    return data;
+    return { kind: 'shared' };
   } catch (e) {
     return null;
   }
