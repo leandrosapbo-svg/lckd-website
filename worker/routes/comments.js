@@ -1,12 +1,13 @@
 // Coach notes about a student.
 //   GET  /api/admin/comments?pid=...   the notes + the categories to pick from      (any signed-in person)
 //   POST /api/admin/comments           { action: 'add', pid, category, body }        (a coach signed in with Google)
+//                                      { action: 'edit', pid, id, category, body }   (the author only; the old text is kept)
 //                                      { action: 'delete', pid, id }                 (the author, or the owner)
 // Every answer carries the student's fresh list of notes.
 
 import { readSession, json, sameOrigin } from '../lib/auth.js';
 import { hasDb } from '../lib/coaches.js';
-import { CATEGORIES, categoryKey, cleanBody, validPid, listComments, addComment, deleteComment } from '../lib/comments.js';
+import { CATEGORIES, categoryKey, cleanBody, validPid, listComments, addComment, editComment, deleteComment } from '../lib/comments.js';
 
 const notReady = () => json({ error: 'The notes database is not connected.' }, 503);
 
@@ -47,6 +48,19 @@ export async function onRequestPost({ request, env }) {
     if (!category) return json({ error: 'Pick a category.' }, 400);
     if (!body) return json({ error: 'Write something first.' }, 400);
     await addComment(env, { pid: b.pid, category, body, authorEmail: s.email, authorName: s.name });
+    return answer(env, s, b.pid, { ok: true });
+  }
+
+  if (b.action === 'edit') {
+    const id = Number(b.id);
+    const category = categoryKey(b.category);
+    const body = cleanBody(b.body);
+    if (!Number.isInteger(id) || id < 1) return json({ error: 'Bad note.' }, 400);
+    if (!category) return json({ error: 'Pick a category.' }, 400);
+    if (!body) return json({ error: 'Write something first.' }, 400);
+    const done = await editComment(env, { id, pid: b.pid, category, body, byEmail: s.email });
+    if (done === null) return json({ error: 'Editing is not available right now. Delete the note and write it again.' }, 503);
+    if (!done) return json({ error: 'You can only edit your own notes.' }, 403);
     return answer(env, s, b.pid, { ok: true });
   }
 

@@ -4,8 +4,32 @@
 // So a "deleted" note is only hidden (deleted_at / deleted_by are filled in); the row stays in the database.
 // A student is identified by their private id (pid). Do not rotate SESSION_SECRET: the pids would change and every
 // note would lose its student.
+// A note can be edited by its author; the earlier version is kept in comment_history.
 
 import { ensureSchema, normEmail } from './coaches.js';
+
+// Databases made before notes could be edited have no edited_at column. SQLite cannot "add a column if missing", so
+// look first. This runs once per Worker instance and only for the notes code, so a problem here can never stop
+// anybody from signing in (sign-in only needs ensureSchema).
+let ready = null;
+let editable = true; // false if the edited_at column could not be added: notes still work, only editing is switched off
+async function migrateComments(env) {
+  const info = await env.DB.prepare('PRAGMA table_info(comments)').all();
+  if ((info.results || []).some((c) => c.name === 'edited_at')) return;
+  try {
+    await env.DB.prepare('ALTER TABLE comments ADD COLUMN edited_at TEXT').run();
+  } catch (e) {
+    if (!/duplicate column/i.test(String((e && e.message) || e))) throw e; // another instance got there first
+  }
+}
+function ensureComments(env) {
+  if (!ready) {
+    ready = ensureSchema(env)
+      .then(() => migrateComments(env).then(() => { editable = true; }, () => { editable = false; }))
+      .catch((e) => { ready = null; throw e; });
+  }
+  return ready;
+}
 
 // The categories coaches can pick. Change the labels here (or add one at the end): the page reads this list from the
 // Worker. Do not rename a key that already has notes (they would show up as "General").
@@ -37,10 +61,10 @@ export function cleanBody(s) {
 
 // Newest first. viewerEmail / viewerIsOwner decide which notes show a Delete button (your own; the owner may delete any).
 export async function listComments(env, pid, viewerEmail, viewerIsOwner) {
-  await ensureSchema(env);
+  await ensureComments(env);
   const me = normEmail(viewerEmail);
   const { results } = await env.DB.prepare(
-    'SELECT id, category, body, author_email, author_name, created_at FROM comments WHERE pid = ? AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ?'
+    `SELECT id, category, body, author_email, author_name, created_at, ${editable ? 'edited_at' : 'NULL AS edited_at'} FROM comments WHERE pid = ? AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ?`
   ).bind(pid, MAX_LIST).all();
   return (results || []).map((r) => {
     const mine = !!me && normEmail(r.author_email) === me;
@@ -50,14 +74,16 @@ export async function listComments(env, pid, viewerEmail, viewerIsOwner) {
       body: r.body,
       author: r.author_name || String(r.author_email || '').split('@')[0],
       at: r.created_at,
+      edited: r.edited_at || null,
       mine,
-      canDelete: mine || !!viewerIsOwner,
+      canEdit: mine && editable,          // only the author edits a note
+      canDelete: mine || !!viewerIsOwner, // the owner may hide any note
     };
   });
 }
 
 export async function addComment(env, { pid, category, body, authorEmail, authorName }) {
-  await ensureSchema(env);
+  await ensureComments(env);
   await env.DB.prepare(
     'INSERT INTO comments (pid, category, body, author_email, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(pid, category, body, normEmail(authorEmail), String(authorName || '').slice(0, 80), new Date().toISOString()).run();
@@ -65,13 +91,28 @@ export async function addComment(env, { pid, category, body, authorEmail, author
 
 // Hides a note (never removes it). The author can hide their own; the owner can hide any. -> true if one was hidden
 export async function deleteComment(env, { id, pid, byEmail, isOwner }) {
-  await ensureSchema(env);
+  await ensureComments(env);
   const now = new Date().toISOString();
   const by = normEmail(byEmail);
   const r = isOwner
     ? await env.DB.prepare('UPDATE comments SET deleted_at = ?, deleted_by = ? WHERE id = ? AND pid = ? AND deleted_at IS NULL').bind(now, by, id, pid).run()
     : await env.DB.prepare('UPDATE comments SET deleted_at = ?, deleted_by = ? WHERE id = ? AND pid = ? AND author_email = ? AND deleted_at IS NULL').bind(now, by, id, pid, by).run();
   return !!(r && r.meta && r.meta.changes);
+}
+
+// The author changes the text and/or category of their own note. The earlier version is saved in comment_history
+// first (both statements run together as one transaction). -> true if it was changed, false if it is not theirs,
+// null if editing is switched off because the database could not be upgraded
+export async function editComment(env, { id, pid, category, body, byEmail }) {
+  await ensureComments(env);
+  if (!editable) return null;
+  const now = new Date().toISOString();
+  const by = normEmail(byEmail);
+  const [, update] = await env.DB.batch([
+    env.DB.prepare('INSERT INTO comment_history (comment_id, category, body, saved_at) SELECT id, category, body, ? FROM comments WHERE id = ? AND pid = ? AND author_email = ? AND deleted_at IS NULL').bind(now, id, pid, by),
+    env.DB.prepare('UPDATE comments SET category = ?, body = ?, edited_at = ? WHERE id = ? AND pid = ? AND author_email = ? AND deleted_at IS NULL').bind(category, body, now, id, pid, by),
+  ]);
+  return !!(update && update.meta && update.meta.changes);
 }
 
 // For the little note icon in a class's student list: { [pid]: { n: how many notes, inj: has an injury/health note } }

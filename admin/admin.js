@@ -349,6 +349,7 @@
   }
 
   function fillSheet(c, mode) {
+    setSheetActions('');
     var d = state.data, cap = d.capacity, s = stats(c, d.zones), total = s.total, left = cap - total;
     var ladies = c.kind === 'Ladies only' && s.men === 0;
     $('sheetTitle').textContent = c.time + ' · ' + c.kind;
@@ -443,6 +444,7 @@
 
   // The list behind the gift icon: who is celebrating what, and which class they are booked into
   function fillSpecial() {
+    setSheetActions('');
     var d = state.data;
     var list = celebrants(d);
     $('sheetKind').textContent = 'Celebrations';
@@ -538,6 +540,9 @@
     $('sheetClose').setAttribute('aria-label', fromSearch ? 'Close' : fromSpecial ? 'Back to celebrations' : 'Back to students');
     $('sheetTitle').textContent = name;
     $('sheetSub').textContent = fromSearch ? (sub || 'No phone number saved') : fromSpecial ? (sub || '') : (c ? c.time + ' · ' + c.kind + ' · ' + labelFor(state.data.date) : '');
+    state.open.sub = $('sheetSub').textContent; // (the notes view changes the header; closing it puts these back)
+    state.open.closeLabel = $('sheetClose').getAttribute('aria-label');
+    setSheetActions('');
     $('sheetBody').innerHTML = backButton() + '<div class="skel" style="height:120px"></div><div class="skel" style="height:200px"></div>';
     $('sheetPanel').scrollTop = 0;
     if (fromSearch) $('sheet').querySelector('.sheet-head .icon').focus();
@@ -587,8 +592,8 @@
       (h.plan || []).map(function (p) {
         return '<span class="plan ' + esc(p.kind) + '">' + esc(p.name) + (p.until ? ' · until ' + esc(dayMonth(p.until)) : '') + '</span>';
       }).join('') + '</div>';
-    html += whatsappButton(h);
-    html += '<section class="notes" id="notes" aria-live="polite"><div class="skel" style="height:60px"></div></section>';
+    setSheetActions(whatsappButton(h));
+    html += '<section class="notes" id="notes" aria-live="polite"><div class="skel" style="height:72px"></div></section>';
 
     if (!s.booked) {
       // hasProfile = we did read their G8TS profile, and it really has no classes. Otherwise we simply have not read it yet.
@@ -631,7 +636,10 @@
       html += '<p class="note">Booked through the G8TS app, so there is no full profile. History only goes back to ' + esc(dayMonth(h.limitedSince)) + ', when we first saved it.</p>';
     }
     $('sheetBody').innerHTML = html;
-    if (state.open && state.open.pid) loadNotes(state.open.pid);
+    if (state.open && state.open.pid) {
+      if (noteState && noteState.pid === state.open.pid) fillNotesSummary(); // show what we already have, then refresh it
+      loadNotes(state.open.pid);
+    }
   }
 
   /* ---------- WhatsApp message about their booking ---------- */
@@ -675,19 +683,22 @@
     return head + ' about your bookings:\n' + list.map(function (b) { return '- ' + waLine(b); }).join('\n');
   }
 
-  // Only when we have a usable phone number for them
+  // Round button in the sheet header, only when we have a usable phone number for them
+  function setSheetActions(html) { $('sheetActions').innerHTML = html || ''; }
   function whatsappButton(h) {
     if (!h.wa) return '';
     var list = bookingsForMessage(h);
+    var first = firstNameOf(state.open && state.open.name);
     var url = 'https://wa.me/' + h.wa + '?text=' + encodeURIComponent(waMessage(state.open && state.open.name, list));
-    return '<a class="wa" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + WA_ICON +
-      '<span class="wa-t"><b>Message on WhatsApp</b><small>' + esc(h.phone || '+' + h.wa) +
-      (list.length ? ' · with their booking' + (list.length > 1 ? 's' : '') : ' · no upcoming booking to mention') + '</small></span></a>';
+    return '<a class="wabtn" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" aria-label="Message ' + esc(first) + ' on WhatsApp' + (list.length ? ' about their booking' : '') +
+      '" title="WhatsApp ' + esc(h.phone || '+' + h.wa) + (list.length ? ' · with their booking' + (list.length > 1 ? 's' : '') : '') + '">' + WA_ICON + '</a>';
   }
+  function firstNameOf(name) { return String(name || '').trim().split(/\s+/)[0] || 'this student'; }
 
-  /* ---------- Coach notes on the student sheet ---------- */
-  // Every coach sees every note. Notes are kept forever (deleting one only hides it).
-  var noteState = null; // { pid, cats, list, canWrite, composing, cat }
+  /* ---------- Coach notes: a summary on the student page, the full list in its own view ---------- */
+  // Every coach sees every note. Notes are kept forever (deleting one only hides it; editing keeps the old text).
+  var noteState = null; // { pid, cats, list, canWrite, composing, editing (note id or 0), cat }
+  var NSUM_CHEV = '<svg class="nchev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 
   function noteWhen(iso) {
     var d = new Date(iso);
@@ -702,44 +713,125 @@
   }
 
   function loadNotes(pid) {
-    noteState = null;
+    if (noteState && noteState.pid !== pid) noteState = null;
     api('/api/admin/comments?pid=' + encodeURIComponent(pid)).then(function (r) {
       if (r.status === 401) { showLogin(); return; }
-      if (!state.open || state.open.pid !== pid || !$('notes')) return;
+      if (!state.open || state.open.pid !== pid) return;
+      if (state.open.notes) return; // the notes view is open and has its own up-to-date list: never redraw it under someone typing
+      if (!$('notes')) return;
       if (!r.ok) { $('notes').innerHTML = '<p class="none">' + esc(r.body.error || 'Could not load the notes.') + '</p>'; return; }
-      noteState = { pid: pid, cats: r.body.categories || [], list: r.body.comments || [], canWrite: !!r.body.canWrite, composing: false, cat: 'general' };
+      noteState = { pid: pid, cats: r.body.categories || [], list: r.body.comments || [], canWrite: !!r.body.canWrite, composing: false, editing: 0, cat: 'general' };
       setLocalNotes(pid, noteState.list);
-      fillNotes();
+      fillNotesSummary();
     }).catch(function () {
-      if (state.open && state.open.pid === pid && $('notes')) $('notes').innerHTML = '<p class="none">No connection. The notes could not be loaded.</p>';
+      if (state.open && state.open.pid === pid && $('notes') && !state.open.notes) $('notes').innerHTML = '<p class="none">No connection. The notes could not be loaded.</p>';
     });
   }
 
-  function fillNotes() {
+  // The short version on the student page: how many, which kinds, and the latest one. Tap = the full notes.
+  function fillNotesSummary() {
     var el = $('notes'), n = noteState;
-    if (!el || !n || !state.open || state.open.pid !== n.pid) return;
-    var first = String(state.open.name || '').trim().split(/\s+/)[0] || 'this student';
-    var html = '<div class="nhead"><h3>Coach notes' + (n.list.length ? ' · ' + n.list.length : '') + '</h3>' +
-      (n.canWrite && !n.composing ? '<button type="button" class="nadd" data-note-add>+ Add note</button>' : '') + '</div>';
-    if (n.composing) {
-      html += '<div class="composer"><div class="cats" role="radiogroup" aria-label="Category">' + n.cats.map(function (c) {
-        return '<button type="button" class="ncat c-' + esc(c.key) + (c.key === n.cat ? ' on' : '') + '" role="radio" aria-checked="' + (c.key === n.cat) + '" data-cat="' + esc(c.key) + '">' + esc(c.label) + '</button>';
-      }).join('') + '</div>' +
-        '<textarea id="noteText" rows="4" maxlength="1500" placeholder="Write a note about ' + esc(first) + '" aria-label="Note"></textarea>' +
-        '<p id="noteErr" class="error" role="alert" hidden></p>' +
-        '<div class="nbtns"><button type="button" class="ghost" data-note-cancel>Cancel</button><button type="button" class="nsave" data-note-save>Save note</button></div></div>';
+    if (!el || !n || !state.open || state.open.pid !== n.pid || state.open.notes) return;
+    var list = n.list;
+    if (!list.length) {
+      el.innerHTML = '<button type="button" class="nsum nsum-empty" data-notes-open' + (n.canWrite ? '' : ' disabled') + '>' +
+        '<span class="nsum-top"><b>Coach notes</b></span><span class="nsum-last">' + (n.canWrite ? 'No notes yet. Tap to add the first one.' : 'No notes yet.') + '</span>' + (n.canWrite ? NSUM_CHEV : '') + '</button>';
+      return;
     }
-    if (!n.list.length && !n.composing) {
-      html += '<p class="none">No notes yet.' + (n.canWrite ? '' : ' Sign in with Google to write one.') + '</p>';
-    }
-    html += n.list.map(function (c) {
-      return '<div class="note-item c-' + esc(c.category) + '"><div class="nmeta"><span class="ntag c-' + esc(c.category) + '">' + esc(catLabel(c.category)) + '</span>' +
-        '<span class="nwho">' + esc(c.author) + '</span><span class="nwhen">' + esc(noteWhen(c.at)) + '</span>' +
-        (c.canDelete ? '<button type="button" class="ndel" data-note-del="' + Number(c.id) + '">Delete</button>' : '') + '</div>' +
-        '<p class="nbody">' + esc(c.body) + '</p></div>';
+    var counts = {};
+    list.forEach(function (c) { counts[c.category] = (counts[c.category] || 0) + 1; });
+    var chips = n.cats.filter(function (c) { return counts[c.key]; }).map(function (c) {
+      return '<span class="ntag c-' + esc(c.key) + '">' + esc(c.label) + ' · ' + counts[c.key] + '</span>';
     }).join('');
-    el.innerHTML = html;
-    if (n.composing) { var ta = $('noteText'); if (ta) ta.focus(); }
+    var last = list[0];
+    var preview = String(last.body).replace(/\s+/g, ' ').trim();
+    if (preview.length > 110) preview = preview.slice(0, 107).replace(/\s+\S*$/, '') + '…';
+    el.innerHTML = '<button type="button" class="nsum' + (counts.injury ? ' inj' : '') + '" data-notes-open>' +
+      '<span class="nsum-top"><b>Coach notes</b><span class="nsum-n">' + list.length + '</span></span>' +
+      '<span class="nsum-cats">' + chips + '</span>' +
+      '<span class="nsum-last">“' + esc(preview) + '”<small>' + esc(last.author) + ' · ' + esc(noteWhen(last.at)) + '</small></span>' + NSUM_CHEV + '</button>';
+  }
+
+  // the student page (summary) or the notes view, whichever is showing
+  function fillNotes() {
+    if (!noteState || !state.open || state.open.pid !== noteState.pid) return;
+    if (state.open.notes) fillNotesView(); else fillNotesSummary();
+  }
+
+  function restoreStudentHead() {
+    var o = state.open;
+    if (!o) return;
+    $('sheetKind').textContent = 'Student history';
+    $('sheetTitle').textContent = o.name;
+    $('sheetSub').textContent = o.sub || '';
+    $('sheetClose').setAttribute('aria-label', o.closeLabel || 'Back to students');
+  }
+
+  function openNotes() {
+    var n = noteState;
+    if (!state.open || state.open.mode !== 'student' || !n || state.open.pid !== n.pid) return;
+    state.open.notes = true;
+    n.editing = 0;
+    n.composing = n.canWrite && !n.list.length; // nothing there yet: go straight to writing the first one
+    n.cat = 'general';
+    fillNotesView();
+    $('sheetPanel').scrollTop = 0;
+  }
+
+  function closeNotes() {
+    if (!state.open) return;
+    state.open.notes = false;
+    if (noteState) { noteState.composing = false; noteState.editing = 0; }
+    restoreStudentHead();
+    var cached = state.hist[state.open.pid];
+    if (cached) renderStudent(cached.data);
+    $('sheetPanel').scrollTop = 0;
+  }
+
+  // the category buttons + the text box (used to write a new note and to edit one)
+  function noteForm(text, saveLabel, first) {
+    var n = noteState;
+    return '<div class="composer"><div class="cats" role="radiogroup" aria-label="Category">' + n.cats.map(function (c) {
+      return '<button type="button" class="ncat c-' + esc(c.key) + (c.key === n.cat ? ' on' : '') + '" role="radio" aria-checked="' + (c.key === n.cat) + '" data-cat="' + esc(c.key) + '">' + esc(c.label) + '</button>';
+    }).join('') + '</div>' +
+      '<textarea id="noteText" rows="4" maxlength="1500" placeholder="Write a note about ' + esc(first) + '" aria-label="Note">' + esc(text) + '</textarea>' +
+      '<p id="noteErr" class="error" role="alert" hidden></p>' +
+      '<div class="nbtns"><button type="button" class="ghost" data-note-cancel>Cancel</button><button type="button" class="nsave" data-note-save>' + esc(saveLabel) + '</button></div></div>';
+  }
+
+  function noteItem(c) {
+    return '<div class="note-item c-' + esc(c.category) + '"><div class="nmeta"><span class="ntag c-' + esc(c.category) + '">' + esc(catLabel(c.category)) + '</span>' +
+      '<span class="nwho">' + esc(c.author) + '</span><span class="nwhen">' + esc(noteWhen(c.at)) + '</span>' +
+      (c.edited ? '<span class="nwhen nedited">edited ' + esc(noteWhen(c.edited)) + '</span>' : '') +
+      '<span class="nacts">' +
+      (c.canEdit ? '<button type="button" class="nact" data-note-edit="' + Number(c.id) + '">Edit</button>' : '') +
+      (c.canDelete ? '<button type="button" class="nact" data-note-del="' + Number(c.id) + '">Delete</button>' : '') +
+      '</span></div><p class="nbody">' + esc(c.body) + '</p></div>';
+  }
+
+  // The full notes: add a new one, edit or delete your own (the owner can delete any)
+  function fillNotesView() {
+    var n = noteState;
+    if (!n || !state.open || !state.open.notes) return;
+    var first = firstNameOf(state.open.name);
+    $('sheetKind').textContent = 'Coach notes';
+    $('sheetTitle').textContent = state.open.name;
+    $('sheetSub').textContent = n.list.length ? n.list.length + (n.list.length === 1 ? ' note' : ' notes') : 'No notes yet';
+    $('sheetClose').setAttribute('aria-label', 'Back to ' + first);
+    setSheetActions('');
+    var html = '<button type="button" class="back" data-notes-back>‹ Back to ' + esc(first) + '</button>';
+    if (n.canWrite && !n.composing && !n.editing) html += '<button type="button" class="nadd wide" data-note-add>+ Add note</button>';
+    if (n.composing) html += noteForm('', 'Save note', first);
+    if (!n.list.length && !n.composing) html += '<p class="none">No notes yet.' + (n.canWrite ? '' : ' Sign in with Google to write one.') + '</p>';
+    html += n.list.map(function (c) {
+      if (n.editing === c.id) return '<div class="note-item editing c-' + esc(c.category) + '">' + noteForm(c.body, 'Save changes', first) + '</div>';
+      return noteItem(c);
+    }).join('');
+    $('sheetBody').innerHTML = html;
+    if (n.composing || n.editing) {
+      var ta = $('noteText');
+      if (ta) { ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) { /* ignore */ } }
+    }
   }
 
   function noteRequest(body) {
@@ -749,18 +841,24 @@
   function saveNote() {
     var n = noteState, ta = $('noteText'), err = $('noteErr'), btn = document.querySelector('[data-note-save]');
     if (!n || !ta || !err || !btn) return;
-    var text = ta.value.trim();
+    var text = ta.value.trim(), editing = n.editing;
     err.hidden = true;
     if (!text) { err.textContent = 'Write something first.'; err.hidden = false; ta.focus(); return; }
-    var pid = n.pid;
+    if (editing) {
+      // nothing changed: just close the editor
+      var orig = n.list.filter(function (c) { return c.id === editing; })[0];
+      if (orig && orig.body === text && orig.category === n.cat) { n.editing = 0; fillNotesView(); return; }
+    }
+    var pid = n.pid, label = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Saving…';
-    noteRequest({ action: 'add', pid: pid, category: n.cat, body: text }).then(function (r) {
+    noteRequest(editing ? { action: 'edit', pid: pid, id: editing, category: n.cat, body: text } : { action: 'add', pid: pid, category: n.cat, body: text }).then(function (r) {
       if (r.status === 401) { showLogin(); return; }
       if (!noteState || noteState.pid !== pid || !$('noteErr')) return;
-      if (!r.ok) { $('noteErr').textContent = r.body.error || 'Could not save the note.'; $('noteErr').hidden = false; btn.disabled = false; btn.textContent = 'Save note'; return; }
+      if (!r.ok) { $('noteErr').textContent = r.body.error || 'Could not save the note.'; $('noteErr').hidden = false; btn.disabled = false; btn.textContent = label; return; }
       noteState.list = r.body.comments || [];
       noteState.composing = false;
+      noteState.editing = 0;
       setLocalNotes(pid, noteState.list);
       fillNotes();
     }).catch(function () {
@@ -768,7 +866,7 @@
       $('noteErr').textContent = 'No connection. Your note is still here: try again.';
       $('noteErr').hidden = false;
       btn.disabled = false;
-      btn.textContent = 'Save note';
+      btn.textContent = label;
     });
   }
 
@@ -782,6 +880,7 @@
       if (!noteState || noteState.pid !== pid) return;
       if (!r.ok) { window.alert(r.body.error || 'Could not delete the note.'); return; }
       noteState.list = r.body.comments || [];
+      noteState.editing = 0;
       setLocalNotes(pid, noteState.list);
       fillNotes();
     }).catch(function () { window.alert('No connection. Try again.'); });
@@ -866,6 +965,7 @@
   }
 
   function fillAccount() {
+    setSheetActions('');
     var me = state.me || { kind: 'shared' };
     var coach = me.kind === 'coach';
     $('sheetKind').textContent = 'Account';
@@ -904,6 +1004,7 @@
 
   // msg = { text, bad } shown under the form after an add / remove
   function fillCoaches(msg) {
+    setSheetActions('');
     var list = state.coaches || [], me = state.me || {};
     $('sheetKind').textContent = 'Account';
     $('sheetTitle').textContent = 'Coaches';
@@ -1075,18 +1176,27 @@
     var closer = t.closest('[data-close]');
     if (closer) {
       // the X on a student's history goes back to the student list; tapping outside still closes everything
-      if (state.open && state.open.mode === 'student' && closer.classList.contains('icon')) backToStudents();
+      if (state.open && state.open.mode === 'student' && closer.classList.contains('icon')) { if (state.open.notes) closeNotes(); else backToStudents(); }
       else closeSheet();
       return;
     }
     var back = t.closest('[data-back]');
     if (back) { backToStudents(); return; }
-    if (t.closest('[data-note-add]')) { if (noteState) { noteState.composing = true; fillNotes(); } return; }
-    if (t.closest('[data-note-cancel]')) { if (noteState) { noteState.composing = false; fillNotes(); } return; }
+    if (t.closest('[data-notes-open]')) { openNotes(); return; }
+    if (t.closest('[data-notes-back]')) { closeNotes(); return; }
+    if (t.closest('[data-note-add]')) { if (noteState) { noteState.composing = true; noteState.editing = 0; noteState.cat = 'general'; fillNotesView(); } return; }
+    var noteEdit = t.closest('[data-note-edit]');
+    if (noteEdit && noteState) {
+      var eid = Number(noteEdit.getAttribute('data-note-edit'));
+      var enote = noteState.list.filter(function (c) { return c.id === eid; })[0];
+      if (enote) { noteState.editing = eid; noteState.composing = false; noteState.cat = enote.category; fillNotesView(); }
+      return;
+    }
+    if (t.closest('[data-note-cancel]')) { if (noteState) { noteState.composing = false; noteState.editing = 0; fillNotesView(); } return; }
     var catBtn = t.closest('[data-cat]');
     if (catBtn && noteState) {
       noteState.cat = catBtn.getAttribute('data-cat');
-      [].forEach.call($('notes').querySelectorAll('.ncat'), function (b) { var on = b === catBtn; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+      [].forEach.call(catBtn.parentNode.querySelectorAll('.ncat'), function (b) { var on = b === catBtn; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
       return;
     }
     if (t.closest('[data-note-save]')) { saveNote(); return; }
@@ -1128,8 +1238,8 @@
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;
     // Escape inside the note box only cancels the note (it must not throw the student's page away with the draft)
-    if (e.key === 'Escape' && e.target && e.target.id === 'noteText') { if (noteState) { noteState.composing = false; fillNotes(); } return; }
-    if (e.key === 'Escape') { if (state.open && state.open.mode === 'student') backToStudents(); else closeSheet(); }
+    if (e.key === 'Escape' && e.target && e.target.id === 'noteText') { if (noteState) { noteState.composing = false; noteState.editing = 0; fillNotes(); } return; }
+    if (e.key === 'Escape') { if (state.open && state.open.mode === 'student') { if (state.open.notes) closeNotes(); else backToStudents(); } else closeSheet(); }
     if (e.key === 'Tab') {
       // keep keyboard focus inside the popup
       var f = [].slice.call($('sheetPanel').querySelectorAll('button, input, textarea, a[href]')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });

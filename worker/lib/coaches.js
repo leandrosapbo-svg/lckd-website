@@ -25,9 +25,20 @@ const SCHEMA = [
     author_name TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     deleted_at TEXT,
-    deleted_by TEXT
+    deleted_by TEXT,
+    edited_at TEXT
   )`,
   'CREATE INDEX IF NOT EXISTS comments_by_pid ON comments (pid, created_at)',
+  // The earlier version of a note, saved every time its author edits it (so nothing is ever lost).
+  // (A database created before notes could be edited gets the edited_at column from migrateComments in lib/comments.js.)
+  `CREATE TABLE IF NOT EXISTS comment_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comment_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    body TEXT NOT NULL,
+    saved_at TEXT NOT NULL
+  )`,
+  'CREATE INDEX IF NOT EXISTS comment_history_by_comment ON comment_history (comment_id)',
 ];
 
 export function hasDb(env) {
