@@ -1,12 +1,13 @@
 // Login for the LCKD admin page. Two ways in, both end in the same signed cookie:
 //   1. "Sign in with Google" (routes/google.js): each coach has their own identity, listed in the D1 table `coaches`
-//   2. the shared username + password (the original login; can be switched off with PASSWORD_LOGIN=off)
+//   2. the shared username + password (the original login). SWITCHED OFF since 2026-11-25: it only works if the
+//      variable PASSWORD_LOGIN is set to "on", which nobody should do except in an emergency
 //
 // Secrets / variables (Cloudflare > Worker > Settings > Variables and Secrets, or .dev.vars for local runs):
 //   ADMIN_USER           the shared username
 //   ADMIN_PASSWORD_HASH  pbkdf2$<iterations>$<salt>$<hash>  (made by make-password-hash.mjs)
 //   SESSION_SECRET       32+ random characters, signs the login cookie
-//   PASSWORD_LOGIN       "off" = only Google sign-in works
+//   PASSWORD_LOGIN       leave unset: only Google sign-in works. "on" = bring the shared password back (emergency only)
 // Changing SESSION_SECRET signs everybody out (and would change every student's private id: never rotate it casually).
 
 import { getCoach } from './coaches.js';
@@ -55,9 +56,10 @@ export function isConfigured(env) {
   return !!(env.ADMIN_USER && env.ADMIN_PASSWORD_HASH && hasSecret(env));
 }
 
-// the shared password may be used (PASSWORD_LOGIN=off turns it off once every coach has a Google sign-in)
+// the shared password may be used: OFF unless PASSWORD_LOGIN is explicitly "on". While it is off, the login form is not
+// offered, the login endpoint refuses, and every cookie made by the shared password stops working (readSession).
 export function passwordLoginOn(env) {
-  return String(env.PASSWORD_LOGIN || '').trim().toLowerCase() !== 'off';
+  return String(env.PASSWORD_LOGIN || '').trim().toLowerCase() === 'on';
 }
 
 export function json(body, status = 200, headers = {}) {
