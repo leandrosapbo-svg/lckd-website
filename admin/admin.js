@@ -615,17 +615,10 @@
     }
 
     if (h.recent && h.recent.length) {
-      // their very first class (the oldest row with the first-class date), if it is among the rows shown
-      var firstIdx = -1;
-      if (s.firstClass) {
-        for (var fi = h.recent.length - 1; fi >= 0; fi--) {
-          if (h.recent[fi].date === s.firstClass && h.recent[fi].status !== 'cancelled') { firstIdx = fi; break; }
-        }
-      }
-      html += '<h3>Recent classes</h3>' + h.recent.map(function (r, idx) {
+      // (no "first class ever" highlight here: that only belongs in a class's student list)
+      html += '<h3>Recent classes</h3>' + h.recent.map(function (r) {
         var where = [r.zone ? r.zone + (r.spot ? ' ' + r.spot : '') : '', r.kind === 'Ladies only' ? 'Ladies only' : ''].filter(Boolean).join(' · ');
-        return '<div class="hrow' + (idx === firstIdx ? ' first' : '') + '"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span>' +
-          (idx === firstIdx ? '<small class="firstcap">First class ever</small>' : '') + '</div>' +
+        return '<div class="hrow"><div class="hdate"><b>' + esc(labelFor(r.date)) + '</b><span>' + esc(r.time) + (where ? ' · ' + esc(where) : '') + '</span></div>' +
           (r.type ? '<span class="ttag ' + esc(r.type) + '">' + esc(typeShort(r.type)) + '</span>' : '') +
           '<span class="ttag st-' + esc(r.status || 'booked') + '">' + esc(STATUS_LABEL[r.status] || 'Booked') + '</span></div>';
       }).join('');

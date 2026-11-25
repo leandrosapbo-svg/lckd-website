@@ -335,9 +335,8 @@ input[type=text], input[type=password] {
 
 /* A student's very first class ever: the whole line is tinted so a coach spots it at a glance */
 .firstcap { display: block; margin-top: 1px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--warn); }
-.stu.first, .hrow.first { background: rgba(245, 184, 75, 0.12); box-shadow: inset 3px 0 0 var(--warn); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; }
+.stu.first { background: rgba(245, 184, 75, 0.12); box-shadow: inset 3px 0 0 var(--warn); border-radius: 10px; border-bottom-color: transparent; padding-left: 10px; }
 .stu.first { margin: 3px 0; padding-right: 6px; }
-.hrow.first { margin: 3px 0; padding-right: 8px; }
 
 /* A birthday or a special class number (10th, 25th, 50th ...): tinted like the first class, in the gift icon's colour */
 .celcap { display: block; margin-top: 1px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--party); white-space: normal; }
