@@ -236,6 +236,29 @@
     el.hidden = false;
   }
 
+  // "Updated 14:32" under the title: the hour and minutes (Doha time) when the bookings were last copied over from G8TS.
+  // It stays on every day, because it says how fresh the data is, not which day is on screen. When today's numbers
+  // are getting old it turns amber and says how long ago.
+  function setUpdated(d) {
+    var el = $('updatedAt');
+    var when = d && (d.synced || d.updated);
+    if (!when || isNaN(Date.parse(when))) { el.hidden = true; el.textContent = ''; el.className = 'updatedat'; return; }
+    var t = timeText(when);
+    var ageMin = Math.max(0, Math.round((Date.now() - Date.parse(when)) / 60000));
+    var ago = ageMin >= 120 ? Math.round(ageMin / 60) + ' h ago' : ageMin + ' min ago';
+    var stale = d.date === dohaToday() && ageMin > STALE_MINUTES;
+    el.textContent = 'Updated ' + t;
+    if (stale) {
+      var s = document.createElement('span');
+      s.className = 'ago';
+      s.textContent = ' · ' + ago; // (hidden on very narrow phones, the amber colour still warns)
+      el.appendChild(s);
+    }
+    el.className = 'updatedat' + (stale ? ' stale' : '');
+    el.title = 'Bookings last copied from G8TS at ' + t + ' (' + ago + ')';
+    el.hidden = false;
+  }
+
   function renderSkeleton() {
     setSpecial(0);
     setDayTotal(null);
@@ -245,6 +268,7 @@
   function renderError(msg) {
     setSpecial(0);
     setDayTotal(null);
+    setUpdated(null);
     $('content').innerHTML = '<div class="errbox">' + esc(msg) + '<br><button type="button" id="retry">Try again</button></div>';
     $('retry').addEventListener('click', function () { load(false); });
   }
@@ -256,6 +280,7 @@
   function render() {
     var d = state.data;
     if (!d || d.date !== state.date) return;
+    setUpdated(d);
     setSpecial(celebrants(d).length); // the gift icon shows up when someone booked this day is celebrating
     $('sampleBanner').hidden = d.source !== 'sample';
     var cap = d.capacity, zones = d.zones;
@@ -294,15 +319,11 @@
       return s <= now ? 'live' : '';
     });
 
-    // How old are these numbers? (they come from a snapshot, so this matters)
-    var ageMin = Math.max(0, Math.round((Date.now() - Date.parse(d.updated)) / 60000));
-    var stale = isToday && ageMin > STALE_MINUTES;
-    var upd = 'Updated ' + timeText(d.updated) + (stale ? ' · ' + (ageMin >= 120 ? Math.round(ageMin / 60) + ' h' : ageMin + ' min') + ' ago' : '');
-
+    // (how old these numbers are is shown in the header: setUpdated)
     var html = '<div class="summary">' +
       '<div class="sum-top"><div class="sum-main"><span class="sum-n">' + dayTotal + '</span><span class="sum-l">booked in ' + classes.length + ' classes</span></div></div>' +
       typeGrid(dayTypes) +
-      '<p class="upd' + (stale ? ' stale' : '') + '">' + upd + '</p></div>';
+      '</div>';
 
     classes.forEach(function (c, i) {
       var s = all[i], st = states[i], total = s.total;

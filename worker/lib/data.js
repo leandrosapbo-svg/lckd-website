@@ -161,14 +161,15 @@ export function demoDirectory() {
 export async function getBookings(date, env) {
   if (env.DEMO === '1') return sampleBookings(date);
   if (!env.BOOKINGS) throw new Error('Bookings storage is not set up.');
-  const saved = await env.BOOKINGS.get('day:' + date, 'json');
-  if (!saved) return { date, source: 'live', updated: null, capacity: 50, zones: ZONES, classes: [], noData: true };
+  const [saved, meta] = await Promise.all([env.BOOKINGS.get('day:' + date, 'json'), env.BOOKINGS.get('meta:sync', 'json')]);
+  // "synced" = when the add-on last copied bookings over from G8TS, whatever day is on screen (the header shows its hour and minutes)
+  const synced = meta && meta.at ? meta.at : null;
+  if (!saved) return { date, source: 'live', updated: null, synced, capacity: 50, zones: ZONES, classes: [], noData: true };
   // A snapshot is only rewritten when something changed, so "updated" is when the last sync that covered this day
   // looked at it (kept in meta:sync), not when the numbers last changed.
   let updated = saved.updated;
-  const meta = await env.BOOKINGS.get('meta:sync', 'json');
   if (meta && meta.at && meta.from <= date && date <= meta.to && meta.at > updated) updated = meta.at;
-  return { ...saved, updated, source: 'live', zones: ZONES };
+  return { ...saved, updated, synced, source: 'live', zones: ZONES };
 }
 
 async function sampleBookings(date) {
@@ -229,5 +230,6 @@ async function sampleBookings(date) {
     return { id: date + 'T' + s.time + (s.kind === 'Ladies only' ? 'L' : 'M'), time: s.time, kind: s.kind, name: CLASS_NAME[dow], students };
   });
 
-  return { date, source: 'sample', updated: new Date().toISOString(), capacity: CAPACITY, zones: ZONES, classes };
+  const now = new Date().toISOString();
+  return { date, source: 'sample', updated: now, synced: now, capacity: CAPACITY, zones: ZONES, classes };
 }

@@ -42,6 +42,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cream); out
 .daytotal { color: var(--dim); font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .brandrow .brand { white-space: nowrap; }
 @media (max-width: 350px) { .daytotal .dt-w { display: none; } }
+/* "Updated 14:32" under the title: when the bookings were last copied from G8TS (it fits inside the 44px the buttons need, so the header does not grow) */
+.brandcol { display: flex; flex-direction: column; min-width: 0; }
+.updatedat { margin: 1px 0 0; font-size: 12px; line-height: 1.25; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.updatedat.stale { color: var(--warn); font-weight: 600; }
+@media (max-width: 350px) { .updatedat .ago { display: none; } }
 
 /* Login */
 .login { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
@@ -314,8 +319,6 @@ input[type=text], input[type=password] {
 .type-split .z { color: var(--dim); font-weight: 500; }
 
 .sheet-kind { margin: 0 0 2px !important; font-size: 12px !important; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim) !important; font-weight: 600; }
-.upd { margin: 12px 0 0; font-size: 13px; color: var(--dim); }
-.upd.stale { color: var(--warn); font-weight: 600; }
 
 /* Student list */
 .zh { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 4px !important; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 13px !important; color: var(--cream) !important; }
