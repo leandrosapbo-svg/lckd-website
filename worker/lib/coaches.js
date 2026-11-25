@@ -1,7 +1,8 @@
 // The coaches: who may sign in with Google, kept in the D1 database (binding DB, database "lckd-admin").
 //
 // The tables are created by the Worker itself the first time it runs (CREATE TABLE IF NOT EXISTS), so there is no
-// separate migration step: add a statement to SCHEMA when a new table is needed (comments will go here).
+// separate migration step: add a statement to SCHEMA when a new table is needed. Existing tables are never changed
+// by these statements, so a new column needs its own careful ALTER.
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS coaches (
@@ -13,6 +14,20 @@ const SCHEMA = [
     added_at TEXT NOT NULL,
     last_login TEXT
   )`,
+  // Coach notes about students (lib/comments.js). Kept forever: a deleted note only gets deleted_at, it is never removed.
+  // pid = the student's private id (HMAC of their G8TS PIN with SESSION_SECRET, see lib/pid.js).
+  `CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pid TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general',
+    body TEXT NOT NULL,
+    author_email TEXT NOT NULL,
+    author_name TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    deleted_at TEXT,
+    deleted_by TEXT
+  )`,
+  'CREATE INDEX IF NOT EXISTS comments_by_pid ON comments (pid, created_at)',
 ];
 
 export function hasDb(env) {

@@ -478,10 +478,32 @@
       '<span class="stu-name"><i class="dot ' + g + '"></i><span class="nm"><span class="nm-t">' + esc(p.name) + '</span>' +
       (p.first ? '<small class="firstcap">First class ever</small>' : '') +
       (cel.length ? '<small class="celcap">' + esc(celText(cel)) + '</small>' : '') + '</span></span>' +
+      noteBadge(p) +
       (p.status === 'noshow' ? '<span class="ttag ns">No show</span>' : '') +
       '<span class="ttag ' + esc(p.type) + '">' + esc(typeShort(p.type)) + '</span>' +
       (p.pid ? '<button type="button" class="info" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="History of ' + esc(p.name) + '">i</button>' : '') +
       '</div>';
+  }
+
+  /* ---------- Coach notes: the little icon in the student list ---------- */
+  var NOTE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 20.5l1.5-4.9A8 8 0 1 1 21 12z"/></svg>';
+
+  // The bookings answer carries notes: { pid: { n, inj } } for the students of that day who have notes.
+  function noteInfo(pid) {
+    return (pid && state.data && state.data.notes && state.data.notes[pid]) || null;
+  }
+  function noteBadge(p) {
+    var nt = noteInfo(p.pid);
+    if (!nt) return '';
+    return '<button type="button" class="nbadge' + (nt.inj ? ' inj' : '') + '" data-pid="' + esc(p.pid) + '" data-name="' + esc(p.name) + '" aria-label="' +
+      nt.n + (nt.n === 1 ? ' coach note' : ' coach notes') + (nt.inj ? ', includes an injury or health note' : '') + ' about ' + esc(p.name) + '">' + NOTE_SVG + '<b>' + nt.n + '</b></button>';
+  }
+  // after a note is added or deleted, keep the icon data of the open day in step
+  function setLocalNotes(pid, list) {
+    if (!state.data) return;
+    var notes = state.data.notes || (state.data.notes = {});
+    if (!list.length) { delete notes[pid]; return; }
+    notes[pid] = { n: list.length, inj: list.some(function (c) { return c.category === 'injury'; }) };
   }
 
   /* ---------- One student's history ---------- */
@@ -566,6 +588,7 @@
         return '<span class="plan ' + esc(p.kind) + '">' + esc(p.name) + (p.until ? ' · until ' + esc(dayMonth(p.until)) : '') + '</span>';
       }).join('') + '</div>';
     html += whatsappButton(h);
+    html += '<section class="notes" id="notes" aria-live="polite"><div class="skel" style="height:60px"></div></section>';
 
     if (!s.booked) {
       // hasProfile = we did read their G8TS profile, and it really has no classes. Otherwise we simply have not read it yet.
@@ -608,6 +631,7 @@
       html += '<p class="note">Booked through the G8TS app, so there is no full profile. History only goes back to ' + esc(dayMonth(h.limitedSince)) + ', when we first saved it.</p>';
     }
     $('sheetBody').innerHTML = html;
+    if (state.open && state.open.pid) loadNotes(state.open.pid);
   }
 
   /* ---------- WhatsApp message about their booking ---------- */
@@ -659,6 +683,108 @@
     return '<a class="wa" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + WA_ICON +
       '<span class="wa-t"><b>Message on WhatsApp</b><small>' + esc(h.phone || '+' + h.wa) +
       (list.length ? ' · with their booking' + (list.length > 1 ? 's' : '') : ' · no upcoming booking to mention') + '</small></span></a>';
+  }
+
+  /* ---------- Coach notes on the student sheet ---------- */
+  // Every coach sees every note. Notes are kept forever (deleting one only hides it).
+  var noteState = null; // { pid, cats, list, canWrite, composing, cat }
+
+  function noteWhen(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Qatar' });
+  }
+
+  function catLabel(key) {
+    var cats = (noteState && noteState.cats) || [];
+    for (var i = 0; i < cats.length; i++) if (cats[i].key === key) return cats[i].label;
+    return 'General';
+  }
+
+  function loadNotes(pid) {
+    noteState = null;
+    api('/api/admin/comments?pid=' + encodeURIComponent(pid)).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!state.open || state.open.pid !== pid || !$('notes')) return;
+      if (!r.ok) { $('notes').innerHTML = '<p class="none">' + esc(r.body.error || 'Could not load the notes.') + '</p>'; return; }
+      noteState = { pid: pid, cats: r.body.categories || [], list: r.body.comments || [], canWrite: !!r.body.canWrite, composing: false, cat: 'general' };
+      setLocalNotes(pid, noteState.list);
+      fillNotes();
+    }).catch(function () {
+      if (state.open && state.open.pid === pid && $('notes')) $('notes').innerHTML = '<p class="none">No connection. The notes could not be loaded.</p>';
+    });
+  }
+
+  function fillNotes() {
+    var el = $('notes'), n = noteState;
+    if (!el || !n || !state.open || state.open.pid !== n.pid) return;
+    var first = String(state.open.name || '').trim().split(/\s+/)[0] || 'this student';
+    var html = '<div class="nhead"><h3>Coach notes' + (n.list.length ? ' · ' + n.list.length : '') + '</h3>' +
+      (n.canWrite && !n.composing ? '<button type="button" class="nadd" data-note-add>+ Add note</button>' : '') + '</div>';
+    if (n.composing) {
+      html += '<div class="composer"><div class="cats" role="radiogroup" aria-label="Category">' + n.cats.map(function (c) {
+        return '<button type="button" class="ncat c-' + esc(c.key) + (c.key === n.cat ? ' on' : '') + '" role="radio" aria-checked="' + (c.key === n.cat) + '" data-cat="' + esc(c.key) + '">' + esc(c.label) + '</button>';
+      }).join('') + '</div>' +
+        '<textarea id="noteText" rows="4" maxlength="1500" placeholder="Write a note about ' + esc(first) + '" aria-label="Note"></textarea>' +
+        '<p id="noteErr" class="error" role="alert" hidden></p>' +
+        '<div class="nbtns"><button type="button" class="ghost" data-note-cancel>Cancel</button><button type="button" class="nsave" data-note-save>Save note</button></div></div>';
+    }
+    if (!n.list.length && !n.composing) {
+      html += '<p class="none">No notes yet.' + (n.canWrite ? '' : ' Sign in with Google to write one.') + '</p>';
+    }
+    html += n.list.map(function (c) {
+      return '<div class="note-item c-' + esc(c.category) + '"><div class="nmeta"><span class="ntag c-' + esc(c.category) + '">' + esc(catLabel(c.category)) + '</span>' +
+        '<span class="nwho">' + esc(c.author) + '</span><span class="nwhen">' + esc(noteWhen(c.at)) + '</span>' +
+        (c.canDelete ? '<button type="button" class="ndel" data-note-del="' + Number(c.id) + '">Delete</button>' : '') + '</div>' +
+        '<p class="nbody">' + esc(c.body) + '</p></div>';
+    }).join('');
+    el.innerHTML = html;
+    if (n.composing) { var ta = $('noteText'); if (ta) ta.focus(); }
+  }
+
+  function noteRequest(body) {
+    return api('/api/admin/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  }
+
+  function saveNote() {
+    var n = noteState, ta = $('noteText'), err = $('noteErr'), btn = document.querySelector('[data-note-save]');
+    if (!n || !ta || !err || !btn) return;
+    var text = ta.value.trim();
+    err.hidden = true;
+    if (!text) { err.textContent = 'Write something first.'; err.hidden = false; ta.focus(); return; }
+    var pid = n.pid;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    noteRequest({ action: 'add', pid: pid, category: n.cat, body: text }).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!noteState || noteState.pid !== pid || !$('noteErr')) return;
+      if (!r.ok) { $('noteErr').textContent = r.body.error || 'Could not save the note.'; $('noteErr').hidden = false; btn.disabled = false; btn.textContent = 'Save note'; return; }
+      noteState.list = r.body.comments || [];
+      noteState.composing = false;
+      setLocalNotes(pid, noteState.list);
+      fillNotes();
+    }).catch(function () {
+      if (!$('noteErr')) return;
+      $('noteErr').textContent = 'No connection. Your note is still here: try again.';
+      $('noteErr').hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Save note';
+    });
+  }
+
+  function deleteNote(id) {
+    var n = noteState;
+    if (!n || !id) return;
+    if (!window.confirm('Delete this note? It disappears for every coach.')) return;
+    var pid = n.pid;
+    noteRequest({ action: 'delete', pid: pid, id: id }).then(function (r) {
+      if (r.status === 401) { showLogin(); return; }
+      if (!noteState || noteState.pid !== pid) return;
+      if (!r.ok) { window.alert(r.body.error || 'Could not delete the note.'); return; }
+      noteState.list = r.body.comments || [];
+      setLocalNotes(pid, noteState.list);
+      fillNotes();
+    }).catch(function () { window.alert('No connection. Try again.'); });
   }
 
   function stat(label, value, sub) {
@@ -955,6 +1081,17 @@
     }
     var back = t.closest('[data-back]');
     if (back) { backToStudents(); return; }
+    if (t.closest('[data-note-add]')) { if (noteState) { noteState.composing = true; fillNotes(); } return; }
+    if (t.closest('[data-note-cancel]')) { if (noteState) { noteState.composing = false; fillNotes(); } return; }
+    var catBtn = t.closest('[data-cat]');
+    if (catBtn && noteState) {
+      noteState.cat = catBtn.getAttribute('data-cat');
+      [].forEach.call($('notes').querySelectorAll('.ncat'), function (b) { var on = b === catBtn; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+      return;
+    }
+    if (t.closest('[data-note-save]')) { saveNote(); return; }
+    var noteDel = t.closest('[data-note-del]');
+    if (noteDel) { deleteNote(Number(noteDel.getAttribute('data-note-del'))); return; }
     if (t.closest('[data-signout]')) { signOut(); return; }
     if (t.closest('[data-coaches]')) { openCoaches(); return; }
     if (t.closest('[data-acct-back]')) { state.open = { id: null, mode: 'account' }; fillAccount(); return; }
@@ -966,7 +1103,7 @@
       }
       return;
     }
-    var info = t.closest('.info');
+    var info = t.closest('.info, .nbadge');
     if (info) {
       state.studentsScroll = $('sheetPanel').scrollTop;
       openStudent(info.getAttribute('data-pid'), info.getAttribute('data-name'), 'class');
@@ -990,10 +1127,12 @@
 
   document.addEventListener('keydown', function (e) {
     if ($('sheet').hidden) return;
+    // Escape inside the note box only cancels the note (it must not throw the student's page away with the draft)
+    if (e.key === 'Escape' && e.target && e.target.id === 'noteText') { if (noteState) { noteState.composing = false; fillNotes(); } return; }
     if (e.key === 'Escape') { if (state.open && state.open.mode === 'student') backToStudents(); else closeSheet(); }
     if (e.key === 'Tab') {
       // keep keyboard focus inside the popup
-      var f = [].slice.call($('sheetPanel').querySelectorAll('button, input, a[href]')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
+      var f = [].slice.call($('sheetPanel').querySelectorAll('button, input, textarea, a[href]')).filter(function (b) { return !b.disabled && b.offsetParent !== null; });
       if (!f.length) return;
       var i = f.indexOf(document.activeElement);
       e.preventDefault();
