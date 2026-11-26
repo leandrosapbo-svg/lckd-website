@@ -741,9 +741,111 @@
     $('sheetPanel').scrollTop = state.studentsScroll || 0;
   }
 
+  /* ---------- Birthday card and achievements on the student page ---------- */
+  var BD_COLORS = ['#f472b6', '#f5b84b', '#4fd8c8', '#5aa9ff', '#b79cff', '#6ee7a0'];
+  var CAKE = '<svg class="cake" viewBox="0 0 96 96" width="64" height="64" aria-hidden="true">' +
+    '<ellipse cx="48" cy="86" rx="42" ry="6" fill="rgba(242,237,226,.22)"/>' +
+    '<rect x="14" y="56" width="68" height="28" rx="7" fill="#f472b6"/>' +
+    '<path d="M14 56h68v6q-5.67 9-11.33 0q-5.67 9-11.33 0q-5.67 9-11.33 0q-5.67 9-11.33 0q-5.67 9-11.33 0q-5.67 9-11.33 0z" fill="#f2ede2"/>' +
+    '<g fill="#fff6" ><rect x="22" y="73" width="6" height="2.6" rx="1.3" transform="rotate(-20 25 74)"/><rect x="40" y="76" width="6" height="2.6" rx="1.3" transform="rotate(25 43 77)"/><rect x="58" y="72" width="6" height="2.6" rx="1.3" transform="rotate(-35 61 73)"/><rect x="70" y="77" width="6" height="2.6" rx="1.3" transform="rotate(15 73 78)"/></g>' +
+    '<rect x="26" y="36" width="44" height="22" rx="6" fill="#4fd8c8"/>' +
+    '<path d="M26 36h44v5q-5.5 8-11 0q-5.5 8-11 0q-5.5 8-11 0q-5.5 8-11 0z" fill="#f2ede2"/>' +
+    '<rect x="34" y="20" width="5" height="17" rx="2" fill="#f5b84b"/><rect x="45.5" y="20" width="5" height="17" rx="2" fill="#5aa9ff"/><rect x="57" y="20" width="5" height="17" rx="2" fill="#f472b6"/>' +
+    '<g class="flames"><ellipse class="flame f1" cx="36.5" cy="14.5" rx="3.4" ry="5.6" fill="#ffd36b"/><ellipse class="flame f2" cx="48" cy="14.5" rx="3.4" ry="5.6" fill="#ffd36b"/><ellipse class="flame f3" cx="59.5" cy="14.5" rx="3.4" ry="5.6" fill="#ffd36b"/></g>' +
+    '</svg>';
+
+  // days from today to their birthday (0 = today, negative = already passed), or null when there is none close by
+  function bdayDiff(h) {
+    if (!h || !h.birthday) return null;
+    return Math.round((Date.parse(h.birthday) - Date.parse(dohaToday())) / 86400000);
+  }
+  function reducedMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+
+  // The name, one letter at a time so it can wave in rainbow colours. Names in other scripts (Arabic joins its letters) stay whole.
+  function bdayName(name) {
+    var first = firstNameOf(name);
+    if (!/^[A-Za-zÀ-ɏ'.-]+$/.test(first)) return '<span class="bn-word">' + esc(first) + '</span>';
+    return first.split('').map(function (ch, i) {
+      return '<span class="bn" style="--i:' + i + ';--lc:' + BD_COLORS[i % BD_COLORS.length] + '">' + esc(ch) + '</span>';
+    }).join('');
+  }
+
+  function birthdayHtml(h) {
+    var diff = bdayDiff(h);
+    if (diff === null) return '';
+    var age = h.turning, s = h.summary || {};
+    if (diff !== 0) {
+      // not today: a quiet line, so a coach can say "happy birthday" a day early or late
+      var when = diff === 1 ? 'tomorrow' : diff > 1 ? 'in ' + diff + ' days' : diff === -1 ? 'was yesterday' : 'was ' + (-diff) + ' days ago';
+      var wd = new Date(h.birthday + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+      return '<p class="bday-soon"><span aria-hidden="true">' + (diff > 0 ? '🎈' : '🎂') + '</span> Birthday ' + when +
+        (age ? ' · ' + (diff > 0 ? 'turning ' : 'turned ') + age : '') + ' · ' + esc(wd + ' ' + dayMonth(h.birthday)) + '</p>';
+    }
+    var facts = [];
+    if (!h.limitedSince && s.firstClass && s.firstClass <= dohaToday()) facts.push('Member since ' + esc(sinceDay(s.firstClass)));
+    if (!h.limitedSince && s.attended) facts.push(s.attended + (s.attended === 1 ? ' class' : ' classes'));
+    var w = waLink(h);
+    return '<section class="bday" id="bday" data-bday aria-label="Birthday today">' +
+      '<div class="bday-fx" aria-hidden="true"><div class="confetti"></div><div class="bursts"></div>' +
+      '<i class="balloon b1"></i><i class="balloon b2"></i><i class="balloon b3"></i><i class="balloon b4"></i>' +
+      '<i class="spark s1">✦</i><i class="spark s2">✦</i><i class="spark s3">✦</i></div>' +
+      '<div class="bday-main">' + CAKE +
+      '<div class="bday-text"><p class="bday-kicker">Birthday today</p>' +
+      '<p class="bday-title">Happy birthday, <span class="bday-name">' + bdayName(state.open && state.open.name) + '</span>!</p>' +
+      (facts.length ? '<p class="bday-sub">' + facts.join(' · ') + '</p>' : '') + '</div>' +
+      (age ? '<div class="agebadge" aria-label="Turning ' + age + '"><small>turning</small><b>' + age + '</b></div>' : '') +
+      '</div>' +
+      (w ? '<a class="bday-wa" href="' + esc(w.url) + '" target="_blank" rel="noopener noreferrer">' + WA_ICON + '<span>Send birthday wishes</span></a>' : '') +
+      '</section>';
+  }
+
+  // confetti that keeps drifting down inside the card, plus one burst when it opens (tap the card for another)
+  function startBirthday() {
+    var el = document.getElementById('bday');
+    if (!el || reducedMotion()) return;
+    var fx = el.querySelector('.confetti'), html = '';
+    for (var i = 0; i < 22; i++) {
+      html += '<i style="--x:' + (Math.random() * 100).toFixed(1) + '%;--w:' + (5 + Math.floor(Math.random() * 5)) + 'px;--c:' + BD_COLORS[i % BD_COLORS.length] +
+        ';--t:' + (3.4 + Math.random() * 2.6).toFixed(2) + 's;--d:-' + (Math.random() * 5).toFixed(2) + 's;--r:' + (180 + Math.floor(Math.random() * 540)) +
+        'deg;--s:' + (Math.round(Math.random() * 60) - 30) + 'px"></i>';
+    }
+    fx.innerHTML = html;
+    setTimeout(function () { bdayBurst(el, null); }, 350);
+  }
+  function bdayBurst(el, e) {
+    var layer = el && el.querySelector('.bursts');
+    if (!layer || reducedMotion() || layer.childElementCount > 5) return;
+    var box = el.getBoundingClientRect();
+    var ox = e && e.clientX ? e.clientX - box.left : box.width * 0.2;
+    var oy = e && e.clientY ? e.clientY - box.top : box.height * 0.4;
+    var html = '';
+    for (var i = 0; i < 30; i++) {
+      var ang = Math.random() * Math.PI * 2, dist = 50 + Math.random() * 120;
+      html += '<i style="--ox:' + Math.round(ox) + 'px;--oy:' + Math.round(oy) + 'px;--dx:' + Math.round(Math.cos(ang) * dist) + 'px;--dy:' + Math.round(Math.sin(ang) * dist - 30) +
+        'px;--c:' + BD_COLORS[i % BD_COLORS.length] + ';--r:' + Math.floor(Math.random() * 720) + 'deg"></i>';
+    }
+    var wrap = document.createElement('div');
+    wrap.className = 'burst';
+    wrap.innerHTML = html;
+    layer.appendChild(wrap);
+    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1400);
+  }
+
+  // Badges they have earned (the server only sends the ones they have, so no badges = no section at all)
+  function achievementsHtml(h) {
+    var list = h.achievements || [];
+    if (!list.length) return '';
+    return '<section class="ach" aria-label="Achievements"><h3>Achievements <span class="ach-n">' + list.length + '</span></h3><div class="ach-grid">' +
+      list.map(function (a, i) {
+        return '<div class="badge' + (a.fresh ? ' fresh' : '') + '" style="--i:' + i + '"><span class="bico" aria-hidden="true">' + esc(a.icon) + '</span>' +
+          '<span class="btxt"><b>' + esc(a.title) + '</b><span>' + esc(a.text) + '</span>' + (a.date ? '<em>' + esc(sinceDay(a.date)) + '</em>' : '') + '</span>' +
+          (a.fresh ? '<i class="newtag">New</i>' : '') + '</div>';
+      }).join('') + '</div></section>';
+  }
+
   function renderStudent(h) {
     var s = h.summary || {};
-    var html = backButton();
+    var html = backButton() + birthdayHtml(h);
 
     // gender first, then the plan(s)
     var gk = h.gender === 'F' ? 'w' : h.gender === 'M' ? 'm' : 'u';
@@ -764,6 +866,7 @@
       html += h.hasProfile
         ? '<p class="none">No classes booked yet.</p>'
         : '<p class="none"><b>History not loaded yet.</b><br>This student\'s G8TS profile has not been read yet. It is collected in the background, newest sign-ups first. Check again in a few minutes.</p>';
+      html += achievementsHtml(h);
     } else {
       html += '<div class="big"><b>' + s.attended + '</b><span>classes attended</span></div>' +
         '<div class="stats">' +
@@ -772,6 +875,7 @@
         stat('Usual time', s.usualTime || '-') +
         stat('Favorite zone', s.favZone ? (ZONE_NAME[s.favZone] || s.favZone) : '-') +
         '</div>';
+      html += achievementsHtml(h);
 
       var types = {};
       Object.keys(s.types || {}).forEach(function (k) { types[k] = { women: s.types[k], men: 0, unk: 0 }; });
@@ -795,6 +899,7 @@
       html += '<p class="note">Booked through the G8TS app, so there is no full profile. History only goes back to ' + esc(dayMonth(h.limitedSince)) + ', when we first saved it.</p>';
     }
     $('sheetBody').innerHTML = html;
+    startBirthday();
     if (state.open && state.open.pid) {
       if (noteState && noteState.pid === state.open.pid) fillNotesSummary(); // show what we already have, then refresh it
       loadNotes(state.open.pid);
@@ -844,13 +949,42 @@
 
   // Round button in the sheet header, only when we have a usable phone number for them
   function setSheetActions(html) { $('sheetActions').innerHTML = html || ''; }
+  // On their birthday the message is a personal one instead (see waBirthdayMessage)
+  function waLink(h) {
+    if (!h.wa) return null;
+    var bday = bdayDiff(h) === 0;
+    var name = state.open && state.open.name;
+    var list = bday ? [] : bookingsForMessage(h);
+    var text = bday ? waBirthdayMessage(name, h) : waMessage(name, list);
+    return { url: 'https://wa.me/' + h.wa + '?text=' + encodeURIComponent(text), bday: bday, list: list };
+  }
   function whatsappButton(h) {
-    if (!h.wa) return '';
-    var list = bookingsForMessage(h);
+    var w = waLink(h);
+    if (!w) return '';
     var first = firstNameOf(state.open && state.open.name);
-    var url = 'https://wa.me/' + h.wa + '?text=' + encodeURIComponent(waMessage(state.open && state.open.name, list));
-    return '<a class="wabtn" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" aria-label="Message ' + esc(first) + ' on WhatsApp' + (list.length ? ' about their booking' : '') +
-      '" title="WhatsApp ' + esc(h.phone || '+' + h.wa) + (list.length ? ' · with their booking' + (list.length > 1 ? 's' : '') : '') + '">' + WA_ICON + '</a>';
+    var label = w.bday ? 'Send ' + first + ' birthday wishes on WhatsApp' : 'Message ' + first + ' on WhatsApp' + (w.list.length ? ' about their booking' : '');
+    var extra = w.bday ? ' · birthday wishes' : (w.list.length ? ' · with their booking' + (w.list.length > 1 ? 's' : '') : '');
+    return '<a class="wabtn" href="' + esc(w.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc(label) +
+      '" title="WhatsApp ' + esc(h.phone || '+' + h.wa) + extra + '">' + WA_ICON + '</a>';
+  }
+
+  // "10 Nov" (with the year when it is not this year)
+  function sinceDay(d) { return dayMonth(d) + (d.slice(0, 4) !== dohaToday().slice(0, 4) ? ' ' + d.slice(0, 4) : ''); }
+
+  // The birthday message: their age, since when they have been with LCKD, how many classes they took, and a thank-you for being locked in.
+  // For someone booked through the G8TS app we only saved part of the history (limitedSince), so the numbers are left out rather than guessed.
+  function waBirthdayMessage(name, h) {
+    var first = firstNameOf(name), s = h.summary || {};
+    var since = !h.limitedSince && s.firstClass && s.firstClass <= dohaToday() ? sinceDay(s.firstClass) : '';
+    var n = !h.limitedSince ? (s.attended || 0) : 0;
+    var classes = n + (n === 1 ? ' class' : ' classes');
+    var line = '';
+    if (since && n) line = 'You have been part of LCKD since ' + since + ' and have already taken ' + classes + '.';
+    else if (since) line = 'You have been part of LCKD since ' + since + '.';
+    else if (n) line = 'You have taken ' + classes + ' with us so far.';
+    return 'Happy ' + (h.turning ? ordinal(h.turning) + ' ' : '') + 'birthday, ' + first + '! 🎂🎉\n\n' +
+      (line ? line + ' Thank you for being locked in! 🔒💪' : 'Thank you for being locked in with us! 🔒💪') +
+      '\n\nAll of us at LCKD wish you an amazing day and a strong year ahead. See you in class!';
   }
   function firstNameOf(name) { return String(name || '').trim().split(/\s+/)[0] || 'this student'; }
 
@@ -1332,6 +1466,8 @@
   $('sheet').addEventListener('click', function (e) {
     var t = e.target.closest ? e.target : null;
     if (!t) return;
+    var bdayCard = t.closest('[data-bday]'); // tap the birthday card for another burst of confetti (the WhatsApp button inside works as a link)
+    if (bdayCard && !t.closest('a')) { bdayBurst(bdayCard, e); return; }
     var closer = t.closest('[data-close]');
     if (closer) {
       // the X on a student's history goes back to the student list; tapping outside still closes everything

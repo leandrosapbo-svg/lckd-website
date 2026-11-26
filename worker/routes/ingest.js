@@ -61,14 +61,16 @@ function cleanClass(c) {
     const gender = p.gender === 'F' || p.gender === 'M' ? p.gender : '';
     const name = str(p.name, 80);
     if (!name) continue;
-    // bd = it is their birthday that day; cn = the booking is their 10th / 25th / 50th ... class (the page shows both on the gift icon)
+    // bd = it is their birthday that day: the age they turn (5..120), or true while that is not known (never a date of birth);
+    // cn = the booking is their 10th / 25th / 50th ... class (the page shows both on the gift icon)
+    const bd = p.bd === true ? true : (Number.isInteger(p.bd) && p.bd >= 5 && p.bd <= 120 ? p.bd : undefined);
     const cn = Number.isInteger(p.cn) && p.cn >= 1 && p.cn <= 9999 ? p.cn : undefined;
     // For the "Talk to these" card: te = the day their trial pack ends (they have no paid plan yet), nc = classes they
     // had completed before this one (only sent with te), ab = days since their previous class when that is a long break
     const te = isDate(p.te) && !Number.isNaN(Date.parse(p.te + 'T00:00:00Z')) ? String(p.te) : undefined;
     const nc = te && Number.isInteger(p.nc) && p.nc >= 0 && p.nc <= 9999 ? p.nc : undefined;
     const ab = Number.isInteger(p.ab) && p.ab >= 1 && p.ab <= 999 ? p.ab : undefined;
-    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined, bd: p.bd === true ? true : undefined, cn, te, nc, ab });
+    students.push({ name, pin: cleanPin(p.pin), zone, spot, type, gender, status, first: p.first === true ? true : undefined, bd, cn, te, nc, ab });
   }
   return { id: str(c.id, 40) || null, time, kind: c.kind, name: str(c.name, 120), students };
 }

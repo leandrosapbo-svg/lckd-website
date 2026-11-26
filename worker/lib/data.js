@@ -147,6 +147,18 @@ export function demoHistoryRows(pid, today) {
   return rows;
 }
 
+// A made-up birthday for a made-up student, so the birthday card can be seen in local runs: about 1 in 3 has it today,
+// 1 in 10 tomorrow, 1 in 10 two days ago (same pid always gives the same answer). -> { date, age } or null
+export function demoBirthday(pid, today) {
+  const rand = seeded('birthday:' + pid);
+  const r = rand();
+  const age = 18 + Math.floor(rand() * 40);
+  if (r < 0.3) return { date: today, age };
+  if (r < 0.4) return { date: addDays(today, 1), age };
+  if (r < 0.5) return { date: addDays(today, -2), age };
+  return null;
+}
+
 // Everyone in the demo (all the made-up names the sample classes use), with made-up phone numbers and gender
 export function demoDirectory() {
   const out = [];

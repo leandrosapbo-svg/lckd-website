@@ -2,8 +2,9 @@
 // The history of one student: summary + their most recent classes.
 
 import { readSession, json } from '../lib/auth.js';
-import { dohaToday, addDays, demoHistoryRows } from '../lib/data.js';
+import { dohaToday, addDays, demoHistoryRows, demoBirthday } from '../lib/data.js';
 import { normStatus, mergeRows, summarize } from '../lib/history.js';
+import { achievementsFor, pickBirthday } from '../lib/achievements.js';
 import { directoryEntry } from '../lib/directory.js';
 import { phoneLabel, whatsappNumber } from '../lib/search.js';
 import { hasDb } from '../lib/coaches.js';
@@ -23,10 +24,14 @@ export async function onRequestGet({ request, env }) {
 
   const today = dohaToday();
   let profile = null, saved = [], source = 'live', gender = '';
+  const bdDays = []; // days they were booked on that were their birthday (the sync marks those bookings)
+  const bdAge = {};  // day -> the age they turned on it (the sync sends it with the mark; 0 = not known)
 
   if (env.DEMO === '1') {
     source = 'sample';
     profile = { plan: [{ kind: 'membership', name: 'LCKD FOUNDING 1 MONTH', until: addDays(today, 12) }], bookings: demoHistoryRows(pid, today) };
+    const demoBd = demoBirthday(pid, today);
+    if (demoBd) { bdDays.push(demoBd.date); bdAge[demoBd.date] = demoBd.age; }
   } else {
     if (!env.BOOKINGS) return json({ error: 'Bookings storage is not set up yet.' }, 503);
     profile = await env.BOOKINGS.get('hist:' + pid, 'json');
@@ -45,6 +50,7 @@ export async function onRequestGet({ request, env }) {
         if (s.pid !== pid) return;
         saved.push({ date: day.date, time: c.time, kind: c.kind, type: s.type, zone: s.zone, spot: s.spot, status: normStatus(s.status) });
         if (s.gender === 'F' || s.gender === 'M') gender = s.gender; // days run oldest to newest, so the latest one wins
+        if (s.bd) { bdDays.push(day.date); bdAge[day.date] = Number.isInteger(s.bd) ? s.bd : 0; }
       }));
     });
   }
@@ -61,6 +67,7 @@ export async function onRequestGet({ request, env }) {
 
   const rows = mergeRows(profile && profile.bookings, saved);
   const summary = summarize(rows, today);
+  const birthday = pickBirthday(bdDays, today);
   const oldestSaved = saved.map((r) => r.date).sort()[0] || null;
 
   return json({
@@ -70,6 +77,12 @@ export async function onRequestGet({ request, env }) {
     phone: entry ? phoneLabel(entry.phone) : '',   // as shown to the coach
     wa: entry ? whatsappNumber(entry.phone) : '',  // for a WhatsApp chat link; '' = no usable number
     lastChat: chat, // { by, day } of the last "talked to" tick, or null
+    // the day of their birthday when it is today or close (3 days ago .. a week ahead), else null. Only known for people
+    // who were booked on that day (the sync marks the booking), so the page shows it only when this is set.
+    birthday,
+    turning: birthday && bdAge[birthday] ? bdAge[birthday] : null, // the age they turn on it, when the sync knows it
+    // badges they have earned (none = the page shows no achievements section), worked out from their whole history
+    achievements: achievementsFor(rows, profile && profile.plan, today),
     // for G8TS-app members there is no profile, so history only goes back as far as we saved it
     limitedSince: profile ? null : oldestSaved,
     plan: (profile && profile.plan) || [],
